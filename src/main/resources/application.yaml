@@ -1,0 +1,50 @@
+spring:
+  profiles:
+    active: ${SPRING_ACTIVE_PROFILES:}
+  flyway:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sundaeswap_analytics}
+    user: ${DB_USERNAME:sundaeswap}
+    password: ${DB_PASSWORD:password}
+    schemas: ${DB_SCHEMA:}
+    locations:
+      - classpath:db/store/sundaeswap
+    out-of-order: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sundaeswap_analytics}
+    username: ${DB_USERNAME:sundaeswap}
+    password: ${DB_PASSWORD:password}
+
+blockfrost:
+  # Can put anything here as it's not used
+  url: ""
+  key: ""
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  flyway:
+    url: ${DB_URL:jdbc:h2:./data/db}
+    user: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:password}
+  datasource:
+    url: ${DB_URL:jdbc:h2:./data/db}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:password}
+---
+spring:
+  config:
+    activate:
+      on-profile: local-db
+  flyway:
+    url: ${DB_URL:jdbc:h2:./data/db}
+    user: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:password}
+  datasource:
+    url: ${DB_URL:jdbc:h2:./data/db}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:password}
+  h2:
+    console:
+      enabled: true
