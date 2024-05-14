@@ -23,7 +23,6 @@ public class ScooperController {
     public ResponseEntity<List<ScooperStats>> getStats() {
         List<ScooperStats> scooperStats = scoopRepository
                 .findScooperStats();
-                scooperStats.forEach(foo -> log.info("{}, {}, {}", foo.getPubKeyHash(), foo.getTotalScoops(), foo.getTotalOrders()));
         return ResponseEntity.ok(scooperStats);
     }
 
