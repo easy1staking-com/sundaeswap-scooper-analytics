@@ -41,7 +41,7 @@ public class SundaeswapBlockProcessor {
     private final AppConfig.BlockStreamerConfig blockStreamerConfig;
 
     @PostConstruct
-    public void start() {
+    public void start() throws Exception {
 
         Optional<Scoop> lastPersistedScoop = scoopRepository.findAllByOrderBySlotDesc(Limit.of(1));
 
@@ -87,6 +87,8 @@ public class SundaeswapBlockProcessor {
         }
 
         log.info("about to start streaming");
+
+        Thread.sleep(5000L);
 
         streamer.stream()
                 .subscribe(block -> {
