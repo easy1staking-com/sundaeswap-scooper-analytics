@@ -1,6 +1,28 @@
 # SundaeSwap Scooper Analytics
 
-This is a simple crawler app that stores relevant scoop transaction info and serves aggreagate data over a rest endpoint
+This is a simple crawler app that stores relevant scoop transaction info and serves aggreagate data over a rest endpoint.
+
+This project can run w/o any dependencies or infrastructure by leveraging publicly available nodes, like the IOG one, but 
+it will be very slow.
+
+Please check requirements below to run in a more performant way and how to make it resilient to restarts.
+
+## Requirements
+
+In order to be resilient to restarts and as fast as possible you require:
+1. a blockfrost api key (or your own blockfrost)
+2. a cardano mainnet node (not the socket, just a node)
+
+You can set the stuff above via the following env vars:
+
+```bash
+CARDANO_NODE_HOST: my_node_host
+CARDANO_NODE_PORT: 3000
+BLOCKFROST_KEY: my_project_key
+```
+The reason behind blocksfrost is to compute at restarts which block the last persisted tx belongs to, and the indexer
+will restart from that very same block, instead of rescanning blocks since launch of the v3 protocol.
+
 
 ## Docker Compose
 

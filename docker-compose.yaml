@@ -9,6 +9,7 @@ services:
       SPRING_PROFILES_ACTIVE: local-db
 #      CARDANO_NODE_HOST: my_node_host
 #      CARDANO_NODE_PORT: 3000
+#      BLOCKFROST_KEY: my_project_key
     volumes:
       - ./data:/data
     restart: always
