@@ -38,7 +38,70 @@ be run in docker compose.
 
 The `api` will be available at `http://localhost:8080`
 
-Currently only available endpoint is the all time aggregation:
+## API
+
+There currently are 2 endpoints:
+* list of ordered scoops: `/scoops` with 2 query params: `slot` and `limit` that can be used to paginate. 
+Scoops are returned sorted by `slot` descending.
+* basic stats endpoint `/scoops/stats`
+
+### Paginated List
+
+`curl http://localhost:8080/scoops?slot=124132996&limit=5`
+
+Example Response:
+
+```json
+[
+  {
+    "txHash": "3e0b3d23d9b2cfad90b63326bfce55e1d51708a4df7e4ef6b341446317a6bf61",
+    "scooperPubKeyHash": "8ca0e08cdbc30fa0dd21833d7370d666493ecc28b136df179f97fb5d",
+    "orders": 1,
+    "fees": 340573,
+    "slot": 124132822,
+    "epoch": 0,
+    "version": 3
+  },
+  {
+    "txHash": "8a76477501af0b434eb8fefad9c758ddb45fd6b112fdb838cf29b44618cf5fd0",
+    "scooperPubKeyHash": "8ca0e08cdbc30fa0dd21833d7370d666493ecc28b136df179f97fb5d",
+    "orders": 2,
+    "fees": 389118,
+    "slot": 124132362,
+    "epoch": 0,
+    "version": 3
+  },
+  {
+    "txHash": "8d96b7a35c499394bfac933ab1d8bde9fe625047b289a28be295ff964a699bb2",
+    "scooperPubKeyHash": "8ca0e08cdbc30fa0dd21833d7370d666493ecc28b136df179f97fb5d",
+    "orders": 1,
+    "fees": 370841,
+    "slot": 124132347,
+    "epoch": 0,
+    "version": 3
+  },
+  {
+    "txHash": "26a9802d941b037fa26d1c90089e483c4dc0f43054c05d1b39bdc0b13c012de5",
+    "scooperPubKeyHash": "570cd6294587645d26c690a72d40fede1e7a28cb3ddc78ff76655820",
+    "orders": 1,
+    "fees": 333786,
+    "slot": 124132290,
+    "epoch": 0,
+    "version": 3
+  },
+  {
+    "txHash": "e7e4eb38193c0147a3ef58a30b4e88a9d31fc96a84ca8827ddd5069e11f73ee2",
+    "scooperPubKeyHash": "37eb116b3ff8a70e4be778b5e8d30d3b40421ffe6622f6a983f67f3f",
+    "orders": 1,
+    "fees": 344722,
+    "slot": 124132151,
+    "epoch": 0,
+    "version": 3
+  }
+]
+```
+
+### Scooper Statistics
 
 `curl http://localhost:8080/scoops/stats`
 
