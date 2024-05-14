@@ -39,13 +39,14 @@ public class ScoopController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<List<ExtendedScooperStats>> getStats() {
+    public ResponseEntity<List<ExtendedScooperStats>> getStats(@RequestParam(required = false) Integer limit) {
+        var actualLimit = limit != null ? limit : Long.MAX_VALUE;
         List<ScooperStats> scooperStats = scoopRepository.findScooperStats();
         var sortedStats = scooperStats.stream()
-                .sorted(Comparator.comparingLong(ScooperStats::getTotalScoops))
-                .map(foo -> ExtendedScooperStats.from(foo, pkh -> AddressProvider.getEntAddress(Credential.fromKey(pkh), Networks.mainnet()).getAddress()))
-                .collect(Collectors.toList())
-                .reversed();
+                .sorted(Comparator.comparingLong(ScooperStats::getTotalScoops).reversed())
+                .map(stats -> ExtendedScooperStats.from(stats, pkh -> AddressProvider.getEntAddress(Credential.fromKey(pkh), Networks.mainnet()).getAddress()))
+                .limit(actualLimit)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(sortedStats);
     }
 

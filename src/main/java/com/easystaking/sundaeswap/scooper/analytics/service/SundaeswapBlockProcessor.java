@@ -17,11 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 @RequiredArgsConstructor
@@ -40,11 +38,8 @@ public class SundaeswapBlockProcessor {
 
     private final AppConfig.BlockStreamerConfig blockStreamerConfig;
 
-    @PostConstruct
-    public void start() throws Exception {
-
+    private Point getInitialPoint() {
         Optional<Scoop> lastPersistedScoop = scoopRepository.findAllByOrderBySlotDesc(Limit.of(1));
-
         Point point;
         if (lastPersistedScoop.isEmpty()) {
             log.info("INIT - no tx found in db, syncing from point: {}.{}", INITIAL_POINT.getSlot(), INITIAL_POINT.getHash());
@@ -68,12 +63,11 @@ public class SundaeswapBlockProcessor {
                 point = INITIAL_POINT;
             }
         }
+        return point;
+    }
 
-        List<String> allowedScooperPubKeyHashes = scooperService.getAllowedScooperPubKeyHashes();
-
-        var scoops = new HashMap<String, AtomicLong>();
-        var scooperFees = new HashMap<String, AtomicLong>();
-
+    private BlockStreamer getBlockStreamer() {
+        var point = getInitialPoint();
         BlockStreamer streamer;
         if (blockStreamerConfig.getBlockStreamerHost() != null && blockStreamerConfig.getBlockStreamerPort() != null) {
             log.info("INIT - connecting to node, host: {}, port: {}", blockStreamerConfig.getBlockStreamerHost(), blockStreamerConfig.getBlockStreamerPort());
@@ -85,78 +79,60 @@ public class SundaeswapBlockProcessor {
             log.info("INIT - no custom node configure, connecting to IOG's relay");
             streamer = BlockStreamer.fromPoint(NetworkType.MAINNET, point);
         }
+        return streamer;
+    }
 
-        log.info("about to start streaming");
+    @PostConstruct
+    public void start() throws Exception {
 
-        Thread.sleep(5000L);
+        List<String> allowedScooperPubKeyHashes = scooperService.getAllowedScooperPubKeyHashes();
 
-        streamer.stream()
+        getBlockStreamer()
+                .stream()
                 .subscribe(block -> {
 
-                    try {
 
-                        if (block.getHeader().getHeaderBody().getBlockNumber() % 10 == 0) {
-                            log.info("Processing block number: {}", block.getHeader().getHeaderBody().getBlockNumber());
-                        }
+                    if (block.getHeader().getHeaderBody().getBlockNumber() % 10 == 0) {
+                        log.info("Processing block number: {}", block.getHeader().getHeaderBody().getBlockNumber());
+                    }
 
-                        for (int i = 0; i < block.getTransactionBodies().size(); i++) {
-                            TransactionBody transactionBody = block.getTransactionBodies().get(i);
+                    for (int i = 0; i < block.getTransactionBodies().size(); i++) {
+                        TransactionBody transactionBody = block.getTransactionBodies().get(i);
 
-                            if (transactionBody
-                                    .getOutputs()
-                                    .stream()
-                                    .anyMatch(transactionOutput -> transactionOutput.getAddress().equals(SUNDAE_POOL_ADDRESS))) {
+                        if (transactionBody
+                                .getOutputs()
+                                .stream()
+                                .anyMatch(transactionOutput -> transactionOutput.getAddress().equals(SUNDAE_POOL_ADDRESS))) {
 
-                                Set<String> requiredSigners = transactionBody.getRequiredSigners();
-                                Witnesses witnesses = block.getTransactionWitness().get(i);
-                                if (witnesses != null && requiredSigners != null && !requiredSigners.isEmpty()) {
+                            Set<String> requiredSigners = transactionBody.getRequiredSigners();
+                            Witnesses witnesses = block.getTransactionWitness().get(i);
+                            if (witnesses != null && requiredSigners != null && !requiredSigners.isEmpty()) {
 
-                                    var potentialSwaps = witnesses.getRedeemers().size() - 2;
-                                    var numSwaps = Math.max(0, potentialSwaps);
+                                var orders = witnesses.getRedeemers().size() - 2;
 
-                                    requiredSigners.forEach(signer -> {
+                                requiredSigners.forEach(signer -> {
 
-                                        if (allowedScooperPubKeyHashes.contains(signer)) {
+                                    if (allowedScooperPubKeyHashes.contains(signer)) {
 
-                                            Scoop dbScoop = Scoop.builder()
-                                                    .txHash(transactionBody.getTxHash())
-                                                    .scooperPubKeyHash(signer)
-                                                    .orders((long) potentialSwaps)
-                                                    .fees(transactionBody.getFee().longValue())
-                                                    .epoch(0L)
-                                                    .slot(block.getHeader().getHeaderBody().getSlot())
-                                                    .version(3L)
-                                                    .build();
+                                        Scoop dbScoop = Scoop.builder()
+                                                .txHash(transactionBody.getTxHash())
+                                                .scooperPubKeyHash(signer)
+                                                .orders((long) orders)
+                                                .fees(transactionBody.getFee().longValue())
+                                                .epoch(0L)
+                                                .slot(block.getHeader().getHeaderBody().getSlot())
+                                                .version(3L)
+                                                .build();
 
-                                            scoopRepository.save(dbScoop);
+                                        scoopRepository.save(dbScoop);
 
-                                            var scoop = scoops.get(signer);
-                                            if (scoop == null) {
-                                                scoops.put(signer, new AtomicLong(numSwaps));
-                                            } else {
-                                                scoop.addAndGet(numSwaps);
-                                            }
-
-                                            var fees = scooperFees.get(signer);
-                                            if (fees == null) {
-                                                scooperFees.put(signer, new AtomicLong(transactionBody.getFee().longValue()));
-                                            } else {
-                                                fees.addAndGet(transactionBody.getFee().longValue());
-                                            }
-
-                                        }
-
-
-                                    });
-
-                                }
+                                    }
+                                });
 
                             }
 
                         }
 
-                    } catch (Exception e) {
-                        log.warn("error", e);
                     }
 
 
