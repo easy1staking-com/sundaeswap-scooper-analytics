@@ -40,100 +40,112 @@ The `api` will be available at `http://localhost:8080`
 
 Currently only available endpoint is the all time aggregation:
 
-`curl http://localhost:8080/scoopers/stats`
+`curl http://localhost:8080/scoops/stats`
 
 Result will be similar to 
 ```json
 [
   {
-    "pubKeyHash": "a14cb1a14c4b5810a21103e389f4abdbdec010b766e2dc329a4e0e96",
-    "totalScoops": 2,
-    "totalOrders": 4,
-    "totalFees": 755726
+    "totalScoops": 666,
+    "pubKeyHash": "8ca0e08cdbc30fa0dd21833d7370d666493ecc28b136df179f97fb5d",
+    "totalOrders": 1027,
+    "totalFees": 244362918
   },
   {
-    "pubKeyHash": "dd8a02814820616b137e0fb4852fd8aab36875d849919ca68aa6cb70",
+    "totalScoops": 521,
+    "pubKeyHash": "37eb116b3ff8a70e4be778b5e8d30d3b40421ffe6622f6a983f67f3f",
+    "totalOrders": 700,
+    "totalFees": 188546219
+  },
+  {
+    "totalScoops": 315,
+    "pubKeyHash": "570cd6294587645d26c690a72d40fede1e7a28cb3ddc78ff76655820",
+    "totalOrders": 454,
+    "totalFees": 112226135
+  },
+  {
+    "totalScoops": 91,
+    "pubKeyHash": "6510a3ec0a6f273e31acc82f9f2ffb089413549a04149ea37ef8d33b",
+    "totalOrders": 124,
+    "totalFees": 32585791
+  },
+  {
     "totalScoops": 15,
+    "pubKeyHash": "dd8a02814820616b137e0fb4852fd8aab36875d849919ca68aa6cb70",
     "totalOrders": 25,
     "totalFees": 5612435
   },
   {
-    "pubKeyHash": "570cd6294587645d26c690a72d40fede1e7a28cb3ddc78ff76655820",
-    "totalScoops": 301,
-    "totalOrders": 435,
-    "totalFees": 107310388
-  },
-  {
-    "pubKeyHash": "9366b01d6baf040245ee07127fc8af4f04a75b91c6a97f69c7f6463a",
-    "totalScoops": 2,
-    "totalOrders": 3,
-    "totalFees": 725652
-  },
-  {
-    "pubKeyHash": "61f1baeda28f3f83413b92a7d28d2f7b545d718f2f28f971b92b3a21",
     "totalScoops": 13,
+    "pubKeyHash": "61f1baeda28f3f83413b92a7d28d2f7b545d718f2f28f971b92b3a21",
     "totalOrders": 22,
     "totalFees": 4788772
   },
   {
-    "pubKeyHash": "7a7a02beabb674125d734a24817aea9505b9113540cc72f4ef5c2faf",
-    "totalScoops": 1,
-    "totalOrders": 2,
-    "totalFees": 391296
+    "totalScoops": 7,
+    "pubKeyHash": "fe9315a8d1f638a4836e9ec396d43e1f6ba88e45a7f5a5e37a77071a",
+    "totalOrders": 10,
+    "totalFees": 2500192
   },
   {
-    "pubKeyHash": "37eb116b3ff8a70e4be778b5e8d30d3b40421ffe6622f6a983f67f3f",
-    "totalScoops": 506,
-    "totalOrders": 682,
-    "totalFees": 183266867
-  },
-  {
-    "pubKeyHash": "53d6b12089d642d3bfdc61d5f0f3fddfeeb56f55dcd5bd796b5c25a1",
-    "totalScoops": 1,
-    "totalOrders": 2,
-    "totalFees": 388687
-  },
-  {
-    "pubKeyHash": "40282b949abda48a573fe2757971a1369d2674ac9b6d98c1c2bdbdf7",
-    "totalScoops": 1,
-    "totalOrders": 2,
-    "totalFees": 390851
-  },
-  {
-    "pubKeyHash": "ee8ed5ef92d0a51c6962aac7012906d280aeb412900a7621f782c7c9",
     "totalScoops": 3,
-    "totalOrders": 4,
-    "totalFees": 1083982
-  },
-  {
     "pubKeyHash": "baec408a6fedd39ac0404a2f82c6e75ef06659d8596f9d0af6e01241",
-    "totalScoops": 3,
     "totalOrders": 4,
     "totalFees": 1083901
   },
   {
-    "pubKeyHash": "8ca0e08cdbc30fa0dd21833d7370d666493ecc28b136df179f97fb5d",
-    "totalScoops": 662,
-    "totalOrders": 1021,
-    "totalFees": 242887517
+    "totalScoops": 3,
+    "pubKeyHash": "ee8ed5ef92d0a51c6962aac7012906d280aeb412900a7621f782c7c9",
+    "totalOrders": 4,
+    "totalFees": 1083982
   },
   {
-    "pubKeyHash": "cba4b71bd8cecc54c526bcd71da84f6f79e568604e574149854dbb86",
+    "totalScoops": 2,
+    "pubKeyHash": "9366b01d6baf040245ee07127fc8af4f04a75b91c6a97f69c7f6463a",
+    "totalOrders": 3,
+    "totalFees": 725652
+  },
+  {
+    "totalScoops": 2,
+    "pubKeyHash": "a14cb1a14c4b5810a21103e389f4abdbdec010b766e2dc329a4e0e96",
+    "totalOrders": 4,
+    "totalFees": 755726
+  },
+  {
     "totalScoops": 1,
+    "pubKeyHash": "cba4b71bd8cecc54c526bcd71da84f6f79e568604e574149854dbb86",
     "totalOrders": 2,
     "totalFees": 388832
   },
   {
-    "pubKeyHash": "6510a3ec0a6f273e31acc82f9f2ffb089413549a04149ea37ef8d33b",
-    "totalScoops": 78,
-    "totalOrders": 104,
-    "totalFees": 27893821
+    "totalScoops": 1,
+    "pubKeyHash": "40282b949abda48a573fe2757971a1369d2674ac9b6d98c1c2bdbdf7",
+    "totalOrders": 2,
+    "totalFees": 390851
   },
   {
-    "pubKeyHash": "fe9315a8d1f638a4836e9ec396d43e1f6ba88e45a7f5a5e37a77071a",
-    "totalScoops": 7,
-    "totalOrders": 10,
-    "totalFees": 2500192
+    "totalScoops": 1,
+    "pubKeyHash": "53d6b12089d642d3bfdc61d5f0f3fddfeeb56f55dcd5bd796b5c25a1",
+    "totalOrders": 2,
+    "totalFees": 388687
+  },
+  {
+    "totalScoops": 1,
+    "pubKeyHash": "6c8ecf30ba1a025dd324cb0598c8ff87522b324901299cf3f4f1d0b2",
+    "totalOrders": 2,
+    "totalFees": 395671
+  },
+  {
+    "totalScoops": 1,
+    "pubKeyHash": "7a7a02beabb674125d734a24817aea9505b9113540cc72f4ef5c2faf",
+    "totalOrders": 2,
+    "totalFees": 391296
+  },
+  {
+    "totalScoops": 1,
+    "pubKeyHash": "251f7fb11f84f81653ee5b76a10dd29fa36ec7717aafe689490cb7e4",
+    "totalOrders": 2,
+    "totalFees": 382203
   }
 ]
 ```
