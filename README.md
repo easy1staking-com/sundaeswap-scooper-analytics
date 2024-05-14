@@ -226,6 +226,6 @@ Then create db:
 ```
 CREATE USER sundaeswap PASSWORD 'password';
 
-CREATE DATABASE sundaeswap_analytics WITH OWNER sundaeswap;
+CREATE DATABASE sundaeswap_scooper WITH OWNER sundaeswap;
 ```
 

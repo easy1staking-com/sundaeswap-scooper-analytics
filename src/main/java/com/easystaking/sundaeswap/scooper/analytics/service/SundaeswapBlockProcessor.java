@@ -80,74 +80,83 @@ public class SundaeswapBlockProcessor {
             streamer = BlockStreamer.fromPoint(blockStreamerConfig.getBlockStreamerHost(),
                     blockStreamerConfig.getBlockStreamerPort(),
                     point,
-                    N2NVersionTableConstant.v4AndAbove(Networks.mainnet().getProtocolMagic()));
+                    N2NVersionTableConstant.v11AndAbove(Networks.mainnet().getProtocolMagic()));
         } else {
             log.info("INIT - no custom node configure, connecting to IOG's relay");
             streamer = BlockStreamer.fromPoint(NetworkType.MAINNET, point);
         }
 
+        log.info("about to start streaming");
+
         streamer.stream()
                 .subscribe(block -> {
 
-                    if (block.getHeader().getHeaderBody().getBlockNumber() % 10 == 0) {
-                        log.info("Processing block number: {}", block.getHeader().getHeaderBody().getBlockNumber());
-                    }
+                    try {
 
-                    for (int i = 0; i < block.getTransactionBodies().size(); i++) {
-                        TransactionBody transactionBody = block.getTransactionBodies().get(i);
+                        if (block.getHeader().getHeaderBody().getBlockNumber() % 10 == 0) {
+                            log.info("Processing block number: {}", block.getHeader().getHeaderBody().getBlockNumber());
+                        }
 
-                        if (transactionBody
-                                .getOutputs()
-                                .stream()
-                                .anyMatch(transactionOutput -> transactionOutput.getAddress().equals(SUNDAE_POOL_ADDRESS))) {
+                        for (int i = 0; i < block.getTransactionBodies().size(); i++) {
+                            TransactionBody transactionBody = block.getTransactionBodies().get(i);
 
-                            Set<String> requiredSigners = transactionBody.getRequiredSigners();
-                            Witnesses witnesses = block.getTransactionWitness().get(i);
-                            if (witnesses != null && requiredSigners != null && !requiredSigners.isEmpty()) {
+                            if (transactionBody
+                                    .getOutputs()
+                                    .stream()
+                                    .anyMatch(transactionOutput -> transactionOutput.getAddress().equals(SUNDAE_POOL_ADDRESS))) {
 
-                                var potentialSwaps = witnesses.getRedeemers().size() - 2;
-                                var numSwaps = Math.max(0, potentialSwaps);
+                                Set<String> requiredSigners = transactionBody.getRequiredSigners();
+                                Witnesses witnesses = block.getTransactionWitness().get(i);
+                                if (witnesses != null && requiredSigners != null && !requiredSigners.isEmpty()) {
 
-                                requiredSigners.forEach(signer -> {
+                                    var potentialSwaps = witnesses.getRedeemers().size() - 2;
+                                    var numSwaps = Math.max(0, potentialSwaps);
 
-                                    if (allowedScooperPubKeyHashes.contains(signer)) {
+                                    requiredSigners.forEach(signer -> {
 
-                                        Scoop dbScoop = Scoop.builder()
-                                                .txHash(transactionBody.getTxHash())
-                                                .scooperPubKeyHash(signer)
-                                                .orders((long) potentialSwaps)
-                                                .fees(transactionBody.getFee().longValue())
-                                                .epoch(0L)
-                                                .slot(block.getHeader().getHeaderBody().getSlot())
-                                                .version(3L)
-                                                .build();
+                                        if (allowedScooperPubKeyHashes.contains(signer)) {
 
-                                        scoopRepository.save(dbScoop);
+                                            Scoop dbScoop = Scoop.builder()
+                                                    .txHash(transactionBody.getTxHash())
+                                                    .scooperPubKeyHash(signer)
+                                                    .orders((long) potentialSwaps)
+                                                    .fees(transactionBody.getFee().longValue())
+                                                    .epoch(0L)
+                                                    .slot(block.getHeader().getHeaderBody().getSlot())
+                                                    .version(3L)
+                                                    .build();
 
-                                        var scoop = scoops.get(signer);
-                                        if (scoop == null) {
-                                            scoops.put(signer, new AtomicLong(numSwaps));
-                                        } else {
-                                            scoop.addAndGet(numSwaps);
+                                            scoopRepository.save(dbScoop);
+
+                                            var scoop = scoops.get(signer);
+                                            if (scoop == null) {
+                                                scoops.put(signer, new AtomicLong(numSwaps));
+                                            } else {
+                                                scoop.addAndGet(numSwaps);
+                                            }
+
+                                            var fees = scooperFees.get(signer);
+                                            if (fees == null) {
+                                                scooperFees.put(signer, new AtomicLong(transactionBody.getFee().longValue()));
+                                            } else {
+                                                fees.addAndGet(transactionBody.getFee().longValue());
+                                            }
+
                                         }
 
-                                        var fees = scooperFees.get(signer);
-                                        if (fees == null) {
-                                            scooperFees.put(signer, new AtomicLong(transactionBody.getFee().longValue()));
-                                        } else {
-                                            fees.addAndGet(transactionBody.getFee().longValue());
-                                        }
 
-                                    }
+                                    });
 
-
-                                });
+                                }
 
                             }
 
                         }
 
+                    } catch (Exception e) {
+                        log.warn("error", e);
                     }
+
 
                 });
 
