@@ -6,10 +6,11 @@ services:
     ports:
       - 8080:8080
     environment:
-      SPRING_PROFILES_ACTIVE: local-db
-#      CARDANO_NODE_HOST: my_node_host
-#      CARDANO_NODE_PORT: 3000
-#      BLOCKFROST_KEY: my_project_key
+      - SPRING_PROFILES_ACTIVE=local-db
+      - DB_URL=jdbc:h2:/data/db
+      - CARDANO_NODE_HOST=${CARDANO_NODE_HOST}
+      - CARDANO_NODE_PORT=${CARDANO_NODE_PORT}
+      - BLOCKFROST_KEY=${BLOCKFROST_KEY}
     volumes:
       - ./data:/data
     restart: always

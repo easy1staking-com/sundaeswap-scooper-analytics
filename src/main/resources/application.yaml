@@ -15,8 +15,8 @@ spring:
     password: ${DB_PASSWORD:password}
 
 block-streamer:
-  host: ${CARDANO_NODE_HOST:#null}
-  port: ${CARDANO_NODE_PORT:#null}
+  host: ${CARDANO_NODE_HOST:#{null}}
+  port: ${CARDANO_NODE_PORT:#{null}}
 
 blockfrost:
   # Can put anything here as it's not used
