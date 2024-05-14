@@ -2,7 +2,7 @@ spring:
   profiles:
     active: ${SPRING_ACTIVE_PROFILES:}
   flyway:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/sundaeswap_analytics}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sundaeswap_scooper}
     user: ${DB_USERNAME:sundaeswap}
     password: ${DB_PASSWORD:password}
     schemas: ${DB_SCHEMA:}
@@ -10,7 +10,7 @@ spring:
       - classpath:db/store/sundaeswap
     out-of-order: true
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/sundaeswap_analytics}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sundaeswap_scooper}
     username: ${DB_USERNAME:sundaeswap}
     password: ${DB_PASSWORD:password}
 

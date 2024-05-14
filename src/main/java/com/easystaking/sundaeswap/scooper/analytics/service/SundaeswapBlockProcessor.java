@@ -14,7 +14,6 @@ import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.cardanofoundation.conversions.CardanoConverters;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Component;
 
@@ -48,17 +47,19 @@ public class SundaeswapBlockProcessor {
 
         Point point;
         if (lastPersistedScoop.isEmpty()) {
+            log.info("INIT - no tx found in db, syncing from point: {}.{}", INITIAL_POINT.getSlot(), INITIAL_POINT.getHash());
             point = INITIAL_POINT;
         } else {
-            log.info("last tx: {}", lastPersistedScoop.get().getTxHash());
+            log.info("INIT - last tx: {}", lastPersistedScoop.get().getTxHash());
             var hash = lastPersistedScoop.get().getTxHash();
             try {
                 var response = bfBackendService.getTransactionService().getTransaction(hash);
                 if (response.isSuccessful()) {
                     var tx = response.getValue();
-                    log.info("Tx: {}, Block hash:{}, block height: {}", hash, tx.getBlock(), tx.getSlot());
+                    log.info("INIT - Tx: {}, Block hash:{}, block height: {}", hash, tx.getBlock(), tx.getSlot());
                     point = new Point(tx.getSlot(), tx.getBlock());
                 } else {
+                    log.info("INIT - error while retrieving most recent tx details, syncing from point: {}.{}", INITIAL_POINT.getSlot(), INITIAL_POINT.getHash());
                     point = INITIAL_POINT;
                 }
 
@@ -75,11 +76,13 @@ public class SundaeswapBlockProcessor {
 
         BlockStreamer streamer;
         if (blockStreamerConfig.getBlockStreamerHost() != null && blockStreamerConfig.getBlockStreamerPort() != null) {
+            log.info("INIT - connecting to node, host: {}, port: {}", blockStreamerConfig.getBlockStreamerHost(), blockStreamerConfig.getBlockStreamerPort());
             streamer = BlockStreamer.fromPoint(blockStreamerConfig.getBlockStreamerHost(),
                     blockStreamerConfig.getBlockStreamerPort(),
                     point,
                     N2NVersionTableConstant.v4AndAbove(Networks.mainnet().getProtocolMagic()));
         } else {
+            log.info("INIT - no custom node configure, connecting to IOG's relay");
             streamer = BlockStreamer.fromPoint(NetworkType.MAINNET, point);
         }
 
