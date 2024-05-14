@@ -10,24 +10,15 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 public class BlockfrostConfig {
 
-    @Value("${blockfrost.url:#null}")
+    @Value("${blockfrost.url}")
     private String blockfrostUrl;
 
-    @Value("${blockfrost.key::#null}")
+    @Value("${blockfrost.key}")
     private String blockfrostKey;
 
     @Bean
     public BFBackendService bfBackendService() {
-        log.info("INIT using bf: {}", blockfrostUrl);
         return new BFBackendService(blockfrostUrl, blockfrostKey);
     }
 
-//    @Bean
-//    public AikenTransactionEvaluator aikenTransactionEvaluator(HybridUtxoSupplier hybridUtxoSupplier,
-//                                                               BFBackendService bfBackendService,
-//                                                               JpgstoreScriptProvider jpgstoreScriptProvider) {
-//        return new AikenTransactionEvaluator(hybridUtxoSupplier,
-//                new DefaultProtocolParamsSupplier(bfBackendService.getEpochService()),
-//                jpgstoreScriptProvider);
-//    }
 }

@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  api:
+    build:
+      context: .
+    ports:
+      - 8080:8080
+    environment:
+      SPRING_PROFILES_ACTIVE: local-db
+#      CARDANO_NODE_HOST: my_node_host
+#      CARDANO_NODE_PORT: 3000
+    volumes:
+      - ./data:/data
+    restart: always

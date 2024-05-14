@@ -1,14 +1,14 @@
 package com.easystaking.sundaeswap.scooper.analytics.service;
 
-import com.bloxbean.cardano.client.api.exception.ApiException;
 import com.bloxbean.cardano.client.backend.blockfrost.service.BFBackendService;
-import com.bloxbean.cardano.client.backend.model.TransactionContent;
 import com.bloxbean.cardano.client.common.model.Networks;
+import com.bloxbean.cardano.yaci.core.common.NetworkType;
 import com.bloxbean.cardano.yaci.core.model.TransactionBody;
 import com.bloxbean.cardano.yaci.core.model.Witnesses;
 import com.bloxbean.cardano.yaci.core.protocol.chainsync.messages.Point;
 import com.bloxbean.cardano.yaci.core.protocol.handshake.util.N2NVersionTableConstant;
 import com.bloxbean.cardano.yaci.helper.reactive.BlockStreamer;
+import com.easystaking.sundaeswap.scooper.analytics.config.AppConfig;
 import com.easystaking.sundaeswap.scooper.analytics.entity.Scoop;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
 import jakarta.annotation.PostConstruct;
@@ -17,9 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -28,26 +30,41 @@ public class SundaeswapBlockProcessor {
 
     private static final String SUNDAE_POOL_ADDRESS = "addr1x8srqftqemf0mjlukfszd97ljuxdp44r372txfcr75wrz26rnxqnmtv3hdu2t6chcfhl2zzjh36a87nmd6dwsu3jenqsslnz7e";
 
+    private static final Point INITIAL_POINT = new Point(123724823, "624435475545b670ddb3dc14ac64a3fdff9454601cb9362f676ddd32dde7a5ef");
+
     private final ScooperService scooperService;
 
     private final ScoopRepository scoopRepository;
 
     private final BFBackendService bfBackendService;
 
+    private final AppConfig.BlockStreamerConfig blockStreamerConfig;
+
     @PostConstruct
-    public void start() throws ApiException {
+    public void start() {
 
-        Optional<Scoop> orderBySlotDesc = scoopRepository.findAllByOrderBySlotDesc(Limit.of(1));
+        Optional<Scoop> lastPersistedScoop = scoopRepository.findAllByOrderBySlotDesc(Limit.of(1));
 
-        if (orderBySlotDesc.isEmpty()) {
-            log.info("EMPTY");
+        Point point;
+        if (lastPersistedScoop.isEmpty()) {
+            point = INITIAL_POINT;
         } else {
-            log.info("last tx: {}", orderBySlotDesc.get().getTxHash());
+            log.info("last tx: {}", lastPersistedScoop.get().getTxHash());
+            var hash = lastPersistedScoop.get().getTxHash();
+            try {
+                var response = bfBackendService.getTransactionService().getTransaction(hash);
+                if (response.isSuccessful()) {
+                    var tx = response.getValue();
+                    log.info("Tx: {}, Block hash:{}, block height: {}", hash, tx.getBlock(), tx.getSlot());
+                    point = new Point(tx.getSlot(), tx.getBlock());
+                } else {
+                    point = INITIAL_POINT;
+                }
 
-            var hash = orderBySlotDesc.get().getTxHash();
-            TransactionContent value = bfBackendService.getTransactionService().getTransaction(hash).getValue();
-            log.info("Tx: {}, Block hash:{}, block height: {}", hash, value.getBlock(), value.getSlot());
-
+            } catch (Exception e) {
+                log.warn("could not fetch transaction and its block", e);
+                point = INITIAL_POINT;
+            }
         }
 
         List<String> allowedScooperPubKeyHashes = scooperService.getAllowedScooperPubKeyHashes();
@@ -55,19 +72,22 @@ public class SundaeswapBlockProcessor {
         var scoops = new HashMap<String, AtomicLong>();
         var scooperFees = new HashMap<String, AtomicLong>();
 
-        var txCounter = new AtomicLong(0L);
-
-        var point = new Point(123724823, "624435475545b670ddb3dc14ac64a3fdff9454601cb9362f676ddd32dde7a5ef");
-//        BlockStreamer streamer = BlockStreamer.fromPoint(NetworkType.MAINNET, point);
-        BlockStreamer streamer = BlockStreamer.fromPoint("ryzen",
-                30000,
-                point,
-                N2NVersionTableConstant.v4AndAbove(Networks.mainnet().getProtocolMagic()));
+        BlockStreamer streamer;
+        if (blockStreamerConfig.getBlockStreamerHost() != null && blockStreamerConfig.getBlockStreamerPort() != null) {
+            streamer = BlockStreamer.fromPoint(blockStreamerConfig.getBlockStreamerHost(),
+                    blockStreamerConfig.getBlockStreamerPort(),
+                    point,
+                    N2NVersionTableConstant.v4AndAbove(Networks.mainnet().getProtocolMagic()));
+        } else {
+            streamer = BlockStreamer.fromPoint(NetworkType.MAINNET, point);
+        }
 
         streamer.stream()
                 .subscribe(block -> {
 
-                    log.info("blockHash: {}", block.getHeader().getHeaderBody().getBlockHash());
+                    if (block.getHeader().getHeaderBody().getBlockNumber() % 10 == 0) {
+                        log.info("Processing block number: {}", block.getHeader().getHeaderBody().getBlockNumber());
+                    }
 
                     for (int i = 0; i < block.getTransactionBodies().size(); i++) {
                         TransactionBody transactionBody = block.getTransactionBodies().get(i);
@@ -119,42 +139,10 @@ public class SundaeswapBlockProcessor {
 
                                 });
 
-                                txCounter.incrementAndGet();
-
                             }
 
                         }
 
-                    }
-
-                    log.info("txCounter: {}", txCounter.get());
-
-                    if (block.getHeader().getHeaderBody().getBlockNumber() % 25 == 0) {
-                        var scooperLeader = scoops.entrySet()
-                                .stream()
-                                .sorted(Comparator.comparingLong(foo -> foo.getValue().longValue()))
-                                .collect(Collectors.toList());
-                        Collections.reverse(scooperLeader);
-                        log.info("\n");
-                        log.info("LEADERBOARD");
-                        scooperLeader.forEach(entry -> {
-                            log.info("{}: {}", entry.getKey(), entry.getValue().get());
-                        });
-                        log.info("\n");
-
-                        var feesLeader = scooperFees.entrySet()
-                                .stream()
-                                .sorted(Comparator.comparingLong(foo -> foo.getValue().longValue()))
-                                .collect(Collectors.toList());
-                        Collections.reverse(feesLeader);
-
-
-                        log.info("\n");
-                        log.info("LEADERBOARD - FEES");
-                        feesLeader.forEach(entry -> {
-                            log.info("{}: {}", entry.getKey(), entry.getValue().get());
-                        });
-                        log.info("\n");
                     }
 
                 });

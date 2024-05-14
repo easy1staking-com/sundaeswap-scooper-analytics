@@ -33,7 +33,7 @@ dependencies {
 	implementation("org.flywaydb:flyway-core")
 
 	implementation 'org.postgresql:postgresql:42.6.0'
-	testImplementation 'com.h2database:h2:2.1.214'
+	implementation 'com.h2database:h2:2.1.214'
 
 
 	// Lombok

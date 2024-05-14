@@ -14,10 +14,14 @@ spring:
     username: ${DB_USERNAME:sundaeswap}
     password: ${DB_PASSWORD:password}
 
+block-streamer:
+  host: ${CARDANO_NODE_HOST:#null}
+  port: ${CARDANO_NODE_PORT:#null}
+
 blockfrost:
   # Can put anything here as it's not used
-  url: ""
-  key: ""
+  url: https://cardano-mainnet.blockfrost.io/api/v0/
+  key: projectId
 
 ---
 spring:
