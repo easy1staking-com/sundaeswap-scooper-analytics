@@ -81,7 +81,7 @@ public class SundaeswapBlockProcessor {
             streamer = BlockStreamer.fromPoint(blockStreamerConfig.getBlockStreamerHost(),
                     blockStreamerConfig.getBlockStreamerPort(),
                     point,
-                    N2NVersionTableConstant.v11AndAbove(Networks.mainnet().getProtocolMagic()));
+                    N2NVersionTableConstant.v4AndAbove(Networks.mainnet().getProtocolMagic()));
         } else {
             log.info("INIT - no custom node configure, connecting to IOG's relay");
             streamer = BlockStreamer.fromPoint(NetworkType.MAINNET, point);
