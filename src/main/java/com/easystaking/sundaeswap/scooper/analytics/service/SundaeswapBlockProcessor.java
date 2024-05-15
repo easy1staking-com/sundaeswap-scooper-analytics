@@ -29,7 +29,8 @@ public class SundaeswapBlockProcessor {
 
     private static final String SUNDAE_POOL_ADDRESS = "addr1x8srqftqemf0mjlukfszd97ljuxdp44r372txfcr75wrz26rnxqnmtv3hdu2t6chcfhl2zzjh36a87nmd6dwsu3jenqsslnz7e";
 
-    private static final Point INITIAL_POINT = new Point(123724823, "624435475545b670ddb3dc14ac64a3fdff9454601cb9362f676ddd32dde7a5ef");
+    private static final Point INITIAL_POINT = new Point(122860840, "62677c50d5720caaae9b35a6b285644c444f6ad40c4e705d7e826a8f4428cad7");
+//    private static final Point INITIAL_POINT = new Point(123714534L, "b343c850a06b5782f530fcb5f740ba0c9368bc9d168debfc22eff17742810293");
 
     private static final Long SCOOP_BASE_FEE = 332000L;
 
