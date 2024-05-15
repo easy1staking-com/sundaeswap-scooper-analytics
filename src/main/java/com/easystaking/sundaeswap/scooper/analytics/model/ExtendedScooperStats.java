@@ -10,7 +10,7 @@ public record ExtendedScooperStats(String pubKeyHash,
                                    String address,
                                    Long totalScoops,
                                    Long totalOrders,
-                                   Long totalUserFee,
+                                   Long totalProtocolFee,
                                    Long totalTransactionFee) {
 
     public static ExtendedScooperStats from(ScooperStats scooperStats, Function<String, String> toAddress) {
@@ -18,7 +18,7 @@ public record ExtendedScooperStats(String pubKeyHash,
                 toAddress.apply(scooperStats.getPubKeyHash()),
                 scooperStats.getTotalScoops(),
                 scooperStats.getTotalOrders(),
-                scooperStats.getTotalUserFee(),
+                scooperStats.getTotalProtocolFee(),
                 scooperStats.getTotalTransactionFee());
     }
 

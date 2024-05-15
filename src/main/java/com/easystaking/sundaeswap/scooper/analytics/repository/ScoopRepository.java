@@ -16,12 +16,12 @@ public interface ScoopRepository extends JpaRepository<Scoop, String> {
     List<Scoop> findAllBySlotLessThanOrderBySlotDesc(Long slot, Limit limit);
 
     @Query("SELECT scooperPubKeyHash AS pubKeyHash, count(1) AS totalScoops, sum(orders) AS totalOrders, " +
-            "sum(userFee) as totalUserFee, sum(transactionFee) as totalTransactionFee " +
+            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee " +
             "FROM Scoop GROUP BY scooperPubKeyHash")
     List<ScooperStats> findScooperStats();
 
     @Query("SELECT scooperPubKeyHash AS pubKeyHash, count(1) AS totalScoops, sum(orders) AS totalOrders, " +
-            "sum(userFee) as totalUserFee, sum(transactionFee) as totalTransactionFee " +
+            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee " +
             "FROM Scoop " +
             "WHERE epoch = :epoch " +
             "GROUP BY scooperPubKeyHash, epoch ")

@@ -23,7 +23,7 @@ public class Scoop {
 
     private Long orders;
 
-    private Long userFee;
+    private Long protocolFee;
 
     private Long transactionFee;
 

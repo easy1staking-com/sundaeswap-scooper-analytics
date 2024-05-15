@@ -53,10 +53,10 @@ public class ScoopController {
 
         var totalScoops = sortedStats.stream().map(ExtendedScooperStats::totalScoops).reduce(Long::sum).orElse(0L);
         var totalOrders = sortedStats.stream().map(ExtendedScooperStats::totalOrders).reduce(Long::sum).orElse(0L);
-        var totalUserFee = sortedStats.stream().map(ExtendedScooperStats::totalUserFee).reduce(Long::sum).orElse(0L);
+        var totalProtocolFee = sortedStats.stream().map(ExtendedScooperStats::totalProtocolFee).reduce(Long::sum).orElse(0L);
         var totalTransactionFee = sortedStats.stream().map(ExtendedScooperStats::totalTransactionFee).reduce(Long::sum).orElse(0L);
 
-        ProtocolScooperStats protocolScooperStats = new ProtocolScooperStats(totalScoops, totalOrders, totalUserFee, totalTransactionFee, sortedStats);
+        ProtocolScooperStats protocolScooperStats = new ProtocolScooperStats(totalScoops, totalOrders, totalProtocolFee, totalTransactionFee, sortedStats);
 
         return ResponseEntity.ok(protocolScooperStats);
     }

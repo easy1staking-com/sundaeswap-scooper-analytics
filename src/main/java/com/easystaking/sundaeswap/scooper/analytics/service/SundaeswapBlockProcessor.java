@@ -122,13 +122,13 @@ public class SundaeswapBlockProcessor {
 
                                     if (allowedScooperPubKeyHashes.contains(signer)) {
 
-                                        var userFee = SCOOP_BASE_FEE / orders + SCOOP_INCREMENTAL_FEE;
+                                        var protocolFee = SCOOP_BASE_FEE + orders * SCOOP_INCREMENTAL_FEE;
 
                                         Scoop dbScoop = Scoop.builder()
                                                 .txHash(transactionBody.getTxHash())
                                                 .scooperPubKeyHash(signer)
                                                 .orders((long) orders)
-                                                .userFee(userFee)
+                                                .protocolFee(protocolFee)
                                                 .transactionFee(transactionBody.getFee().longValue())
                                                 .epoch(epoch)
                                                 .slot(block.getHeader().getHeaderBody().getSlot())
