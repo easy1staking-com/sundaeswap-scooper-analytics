@@ -10,6 +10,8 @@ public interface ScooperStats {
 
     Long getTotalOrders();
 
-    Long getTotalFees();
+    Long getTotalUserFee();
+
+    Long getTotalTransactionFee();
 
 }

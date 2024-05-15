@@ -2,7 +2,8 @@ CREATE TABLE scoops (
     tx_hash TEXT PRIMARY KEY,
     scooper_pub_key_hash TEXT NOT NULL,
     orders BIGINT NOT NULL,
-    fees BIGINT NOT NULL,
+    user_fee BIGINT NOT NULL,
+    transaction_fee BIGINT NOT NULL,
     slot BIGINT NOT NULL,
     epoch BIGINT NOT NULL,
     version BIGINT NOT NULL

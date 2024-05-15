@@ -23,7 +23,9 @@ public class Scoop {
 
     private Long orders;
 
-    private Long fees;
+    private Long userFee;
+
+    private Long transactionFee;
 
     private Long slot;
 
