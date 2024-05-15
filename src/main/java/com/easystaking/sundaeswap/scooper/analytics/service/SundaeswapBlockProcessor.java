@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.bloxbean.cardano.yaci.core.model.RedeemerTag.Spend;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -117,7 +119,14 @@ public class SundaeswapBlockProcessor {
                             Witnesses witnesses = block.getTransactionWitness().get(i);
                             if (witnesses != null && requiredSigners != null && !requiredSigners.isEmpty()) {
 
-                                var orders = witnesses.getRedeemers().size() - 2;
+                                var orders = witnesses.getRedeemers()
+                                        .stream()
+                                        .filter(redeemer -> redeemer.getTag().equals(Spend))
+                                        .count() - 2;
+
+                                if (orders <= 0) {
+                                    log.warn("Unexpected number of orders ({}) for tx: {}", orders, transactionBody.getTxHash());
+                                }
 
                                 requiredSigners.forEach(signer -> {
 
@@ -128,7 +137,7 @@ public class SundaeswapBlockProcessor {
                                         Scoop dbScoop = Scoop.builder()
                                                 .txHash(transactionBody.getTxHash())
                                                 .scooperPubKeyHash(signer)
-                                                .orders((long) orders)
+                                                .orders(orders)
                                                 .protocolFee(protocolFee)
                                                 .transactionFee(transactionBody.getFee().longValue())
                                                 .epoch(epoch)
