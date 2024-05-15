@@ -31,7 +31,7 @@ public class SundaeswapBlockProcessor {
 
     private static final String SUNDAE_POOL_ADDRESS = "addr1x8srqftqemf0mjlukfszd97ljuxdp44r372txfcr75wrz26rnxqnmtv3hdu2t6chcfhl2zzjh36a87nmd6dwsu3jenqsslnz7e";
 
-    private static final Point INITIAL_POINT = new Point(122860840, "62677c50d5720caaae9b35a6b285644c444f6ad40c4e705d7e826a8f4428cad7");
+    private static final Point INITIAL_POINT = new Point(123706722, "09fde708bac045ac54d1f9e2f215e6c235518d1c43b39b645d9fc46d51c76321");
 //    private static final Point INITIAL_POINT = new Point(123714534L, "b343c850a06b5782f530fcb5f740ba0c9368bc9d168debfc22eff17742810293");
 
     private static final Long SCOOP_BASE_FEE = 332000L;
@@ -122,7 +122,7 @@ public class SundaeswapBlockProcessor {
                                 var orders = witnesses.getRedeemers()
                                         .stream()
                                         .filter(redeemer -> redeemer.getTag().equals(Spend))
-                                        .count() - 2;
+                                        .count() - 1;
 
                                 if (orders <= 0) {
                                     log.warn("Unexpected number of orders ({}) for tx: {}", orders, transactionBody.getTxHash());
