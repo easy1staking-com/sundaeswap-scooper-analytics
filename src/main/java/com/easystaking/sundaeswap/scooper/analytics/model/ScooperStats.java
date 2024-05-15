@@ -4,6 +4,8 @@ public interface ScooperStats {
 
     String getPubKeyHash();
 
+    Long getEpoch();
+
     Long getTotalScoops();
 
     Long getTotalOrders();

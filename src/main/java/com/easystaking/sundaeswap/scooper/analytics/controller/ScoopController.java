@@ -39,9 +39,10 @@ public class ScoopController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<List<ExtendedScooperStats>> getStats(@RequestParam(required = false) Integer limit) {
+    public ResponseEntity<List<ExtendedScooperStats>> getStats(@RequestParam(required = false) Integer limit,
+                                                               @RequestParam(required = false) Long epoch) {
         var actualLimit = limit != null ? limit : Long.MAX_VALUE;
-        List<ScooperStats> scooperStats = scoopRepository.findScooperStats();
+        List<ScooperStats> scooperStats = epoch != null ? scoopRepository.findScooperStatsByEpoch(epoch) : scoopRepository.findScooperStats();
         var sortedStats = scooperStats.stream()
                 .sorted(Comparator.comparingLong(ScooperStats::getTotalScoops).reversed())
                 .map(stats -> ExtendedScooperStats.from(stats, pkh -> AddressProvider.getEntAddress(Credential.fromKey(pkh), Networks.mainnet()).getAddress()))

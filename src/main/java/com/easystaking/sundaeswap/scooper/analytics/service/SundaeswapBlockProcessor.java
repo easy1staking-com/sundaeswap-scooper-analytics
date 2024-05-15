@@ -14,6 +14,8 @@ import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.cardanofoundation.conversions.CardanoConverters;
+import org.cardanofoundation.conversions.ConversionsConfig;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +37,8 @@ public class SundaeswapBlockProcessor {
     private final ScoopRepository scoopRepository;
 
     private final BFBackendService bfBackendService;
+
+    private final CardanoConverters cardanoConverters;
 
     private final AppConfig.BlockStreamerConfig blockStreamerConfig;
 
@@ -91,9 +95,10 @@ public class SundaeswapBlockProcessor {
                 .stream()
                 .subscribe(block -> {
 
+                    var epoch = cardanoConverters.slot().slotToEpoch(block.getHeader().getHeaderBody().getSlot());
 
                     if (block.getHeader().getHeaderBody().getBlockNumber() % 10 == 0) {
-                        log.info("Processing block number: {}", block.getHeader().getHeaderBody().getBlockNumber());
+                        log.info("Processing block epoch/number: {}/{}", epoch, block.getHeader().getHeaderBody().getBlockNumber());
                     }
 
                     for (int i = 0; i < block.getTransactionBodies().size(); i++) {
@@ -119,7 +124,7 @@ public class SundaeswapBlockProcessor {
                                                 .scooperPubKeyHash(signer)
                                                 .orders((long) orders)
                                                 .fees(transactionBody.getFee().longValue())
-                                                .epoch(0L)
+                                                .epoch(epoch)
                                                 .slot(block.getHeader().getHeaderBody().getSlot())
                                                 .version(3L)
                                                 .build();
