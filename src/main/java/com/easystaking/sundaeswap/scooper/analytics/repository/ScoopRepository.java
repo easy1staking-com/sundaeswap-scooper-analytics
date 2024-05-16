@@ -15,6 +15,8 @@ public interface ScoopRepository extends JpaRepository<Scoop, String> {
 
     List<Scoop> findAllBySlotLessThanOrderBySlotDesc(Long slot, Limit limit);
 
+    List<Scoop> findAllByScooperPubKeyHashAndSlotLessThanOrderBySlotDesc(String scooperPubKeyHash, Long slot, Limit limit);
+
     @Query("SELECT scooperPubKeyHash AS pubKeyHash, count(1) AS totalScoops, sum(orders) AS totalOrders, " +
             "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee " +
             "FROM Scoop GROUP BY scooperPubKeyHash")

@@ -12,10 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Limit;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Comparator;
 import java.util.List;
@@ -32,11 +29,25 @@ public class ScoopController {
     private final ScoopRepository scoopRepository;
 
     @GetMapping
-    public ResponseEntity<List<Scoop>> get(@RequestParam(required = false) Long slot,
+    public ResponseEntity<List<Scoop>> get(@RequestParam(required = false) String scooperPubKeyHash,
+                                           @RequestParam(required = false) Long slot,
                                            @RequestParam(required = false, defaultValue = "25") Integer limit) {
+        log.info("scooperPubKeyHash: {}", scooperPubKeyHash);
         Long actualSlot = requireNonNullElse(slot, Long.MAX_VALUE);
-        List<Scoop> scoops = scoopRepository.findAllBySlotLessThanOrderBySlotDesc(actualSlot, Limit.of(limit));
+        List<Scoop> scoops;
+        if (scooperPubKeyHash == null || scooperPubKeyHash.isBlank()) {
+            scoops = scoopRepository.findAllBySlotLessThanOrderBySlotDesc(actualSlot, Limit.of(limit));
+        } else {
+            scoops = scoopRepository.findAllByScooperPubKeyHashAndSlotLessThanOrderBySlotDesc(scooperPubKeyHash, actualSlot, Limit.of(limit));
+        }
         return ResponseEntity.ok(scoops);
+    }
+
+    @GetMapping("/{txHash}")
+    public ResponseEntity<Scoop> getByTxHash(@PathVariable String txHash) {
+        log.info("txHash: {}", txHash);
+        var scoopOpt = scoopRepository.findById(txHash);
+        return scoopOpt.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/stats")
