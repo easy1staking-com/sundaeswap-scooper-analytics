@@ -29,6 +29,20 @@ public interface ScoopRepository extends JpaRepository<Scoop, String> {
             "GROUP BY scooperPubKeyHash, epoch ")
     List<ScooperStats> findScooperStatsByEpoch(Long epoch);
 
+    @Query("SELECT scooperPubKeyHash AS pubKeyHash, count(1) AS totalScoops, sum(orders) AS totalOrders, " +
+            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee " +
+            "FROM Scoop " +
+            "WHERE slot > :slot " +
+            "GROUP BY scooperPubKeyHash ")
+    List<ScooperStats> findScooperStatsFromSlot(Long slot);
+
+    @Query("SELECT scooperPubKeyHash AS pubKeyHash, count(1) AS totalScoops, sum(orders) AS totalOrders, " +
+            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee " +
+            "FROM Scoop " +
+            "WHERE slot between :slotFrom and :slotTo " +
+            "GROUP BY scooperPubKeyHash ")
+    List<ScooperStats> findScooperStatsBetweenSlots(Long slotFrom, Long slotTo);
+
     Optional<Scoop> findAllByOrderBySlotDesc(Limit limit);
 
 }

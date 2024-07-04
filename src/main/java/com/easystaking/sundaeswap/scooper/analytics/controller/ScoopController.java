@@ -8,14 +8,20 @@ import com.easystaking.sundaeswap.scooper.analytics.model.ExtendedScooperStats;
 import com.easystaking.sundaeswap.scooper.analytics.model.ProtocolScooperStats;
 import com.easystaking.sundaeswap.scooper.analytics.model.ScooperStats;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
+import com.easystaking.sundaeswap.scooper.analytics.service.SlotConversionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Limit;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNullElse;
@@ -27,6 +33,8 @@ import static java.util.Objects.requireNonNullElse;
 public class ScoopController {
 
     private final ScoopRepository scoopRepository;
+
+    private final SlotConversionService slotConversionService;
 
     @GetMapping
     public ResponseEntity<List<Scoop>> get(@RequestParam(required = false) String scooperPubKeyHash,
@@ -50,11 +58,11 @@ public class ScoopController {
         return scoopOpt.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/stats")
-    public ResponseEntity<ProtocolScooperStats> getStats(@RequestParam(required = false) Integer limit,
-                                                         @RequestParam(required = false) Long epoch) {
+    private ProtocolScooperStats protocolScooperStats(Supplier<List<ScooperStats>> scooperStatsSupplier, Long limit) {
+
         var actualLimit = limit != null ? limit : Long.MAX_VALUE;
-        List<ScooperStats> scooperStats = epoch != null ? scoopRepository.findScooperStatsByEpoch(epoch) : scoopRepository.findScooperStats();
+
+        List<ScooperStats> scooperStats = scooperStatsSupplier.get();
 
         var sortedStats = scooperStats.stream()
                 .sorted(Comparator.comparingLong(ScooperStats::getTotalScoops).reversed())
@@ -67,9 +75,75 @@ public class ScoopController {
         var totalProtocolFee = sortedStats.stream().map(ExtendedScooperStats::totalProtocolFee).reduce(Long::sum).orElse(0L);
         var totalTransactionFee = sortedStats.stream().map(ExtendedScooperStats::totalTransactionFee).reduce(Long::sum).orElse(0L);
 
-        ProtocolScooperStats protocolScooperStats = new ProtocolScooperStats(totalScoops, totalOrders, totalProtocolFee, totalTransactionFee, sortedStats);
+        return new ProtocolScooperStats(totalScoops, totalOrders, totalProtocolFee, totalTransactionFee, sortedStats);
+
+    }
+
+
+    @GetMapping("/stats")
+    public ResponseEntity<ProtocolScooperStats> getStats(@RequestParam(required = false) Integer limit,
+                                                         @RequestParam(required = false) Long epoch) {
+
+        var actualLimit = limit != null ? limit : Long.MAX_VALUE;
+
+        ProtocolScooperStats protocolScooperStats;
+        if (epoch == null) {
+            protocolScooperStats = protocolScooperStats(scoopRepository::findScooperStats, actualLimit);
+        } else {
+            protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsByEpoch(epoch), actualLimit);
+
+        }
 
         return ResponseEntity.ok(protocolScooperStats);
+
+    }
+
+    @Operation(description = "Provide recent scooper statistics")
+    @GetMapping("/stats/{duration}")
+    public ResponseEntity<ProtocolScooperStats> getRecentStats(
+            @Parameter(description = "The duration of the recent statistics. Refer to [docs.oracle.com](https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html#parse-java.lang.CharSequence-) for full docs",
+                    example = "PT5M for the last 5 minutes")
+            @PathVariable String duration,
+            @RequestParam(required = false) Integer limit) {
+
+        var actualDuration = Duration.parse(duration);
+        log.info("actualDuration: {}", actualDuration);
+
+        var actualLimit = limit != null ? limit : Long.MAX_VALUE;
+
+        var slotFrom = slotConversionService.toSlotFromNow(now -> now.minusMinutes(actualDuration.toMinutes()));
+
+        ProtocolScooperStats protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsFromSlot(slotFrom), actualLimit);
+
+        return ResponseEntity.ok(protocolScooperStats);
+
+    }
+
+    @Operation(description = "Provide monthly scooper statistics")
+    @GetMapping("/stats/{monthYear}/month")
+    public ResponseEntity<ProtocolScooperStats> getMonthlyStats(
+            @Parameter(description = "A date containing the month for the reporting in ISO format: YYYY-MM-DD",
+                    example = "2024-06-01")
+            @PathVariable String monthYear,
+            @RequestParam(required = false) Integer limit) {
+
+        var monthDate = LocalDate.parse(monthYear);
+        var firstDayOfTheMonth = monthDate.withDayOfMonth(1);
+        log.info("firstDayOfTheMonth: {}", firstDayOfTheMonth);
+        var firstDayFollowingMonth = firstDayOfTheMonth.plusMonths(1);
+        log.info("firstDayFollowingMonth: {}", firstDayFollowingMonth);
+
+        var actualLimit = limit != null ? limit : Long.MAX_VALUE;
+
+        var slotFrom = slotConversionService.toSlot(firstDayOfTheMonth.atStartOfDay());
+        log.info("slotFrom: {}", slotFrom);
+        var slotTo = slotConversionService.toSlot(firstDayFollowingMonth.atStartOfDay());
+        log.info("slotTo: {}", slotTo);
+
+        ProtocolScooperStats protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsBetweenSlots(slotFrom, slotTo), actualLimit);
+
+        return ResponseEntity.ok(protocolScooperStats);
+
     }
 
 }
