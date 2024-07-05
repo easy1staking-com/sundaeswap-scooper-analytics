@@ -58,16 +58,13 @@ public class ScoopController {
         return scoopOpt.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    private ProtocolScooperStats protocolScooperStats(Supplier<List<ScooperStats>> scooperStatsSupplier, Long limit) {
-
-        var actualLimit = limit != null ? limit : Long.MAX_VALUE;
+    private ProtocolScooperStats protocolScooperStats(Supplier<List<ScooperStats>> scooperStatsSupplier) {
 
         List<ScooperStats> scooperStats = scooperStatsSupplier.get();
 
         var sortedStats = scooperStats.stream()
                 .sorted(Comparator.comparingLong(ScooperStats::getTotalScoops).reversed())
                 .map(stats -> ExtendedScooperStats.from(stats, pkh -> AddressProvider.getEntAddress(Credential.fromKey(pkh), Networks.mainnet()).getAddress()))
-                .limit(actualLimit)
                 .collect(Collectors.toList());
 
         var totalScoops = sortedStats.stream().map(ExtendedScooperStats::totalScoops).reduce(Long::sum).orElse(0L);
@@ -79,78 +76,48 @@ public class ScoopController {
 
     }
 
-
-    @GetMapping("/stats")
-    public ResponseEntity<ProtocolScooperStats> getStats(@RequestParam(required = false) Integer limit,
-                                                         @RequestParam(required = false) Long epoch) {
-
-        var actualLimit = limit != null ? limit : Long.MAX_VALUE;
-
-        ProtocolScooperStats protocolScooperStats;
-        if (epoch == null) {
-            protocolScooperStats = protocolScooperStats(scoopRepository::findScooperStats, actualLimit);
-        } else {
-            protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsByEpoch(epoch), actualLimit);
-
-        }
-
-        return ResponseEntity.ok(protocolScooperStats);
-
-    }
-
     @Operation(description = "Provide recent scooper statistics")
     @GetMapping("/stats/{duration}")
     public ResponseEntity<ProtocolScooperStats> getRecentStats(
             @Parameter(description = "The duration of the recent statistics. Refer to [docs.oracle.com](https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html#parse-java.lang.CharSequence-) for full docs",
                     example = "PT5M for the last 5 minutes")
-            @PathVariable String duration,
-            @RequestParam(required = false) Integer limit) {
+            @PathVariable String duration) {
 
         var actualDuration = Duration.parse(duration);
         log.info("actualDuration: {}", actualDuration);
 
-        var actualLimit = limit != null ? limit : Long.MAX_VALUE;
 
         var slotFrom = slotConversionService.toSlotFromNow(now -> now.minusMinutes(actualDuration.toMinutes()));
 
-        ProtocolScooperStats protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsFromSlot(slotFrom), actualLimit);
+        ProtocolScooperStats protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsFromSlot(slotFrom));
 
         return ResponseEntity.ok(protocolScooperStats);
 
     }
 
-    @Operation(description = "Provide scoopers statistics for a given month")
-    @GetMapping("/stats/{year}/{month}")
-    public ResponseEntity<ProtocolScooperStats> getGivenMonthStats(
-            @PathVariable int year,
-            @PathVariable int month,
-            @RequestParam(required = false) Long limit) {
+    @Operation(summary = "Provide scoopers statistics", description = "Provide per scooper all time scooper stats. Time interval can be reduced by specifying either an epoch, or any combination of start and end date.")
+    @GetMapping("/stats")
+    public ResponseEntity<?> getStats(@Parameter(description = "the start date, in ISO format, to calculate scoopers statistics", example = "2024-04-16")
+                                      @RequestParam(required = false, name = "date_start") LocalDate dateStart,
+                                      @Parameter(description = "the end date (excluded), in ISO format, to calculate scoopers statistics", example = "2024-06-24")
+                                      @RequestParam(required = false, name = "date_end") LocalDate dateEnd,
+                                      @Parameter(description = "the epoch for which calculating stats", example = "324")
+                                      @RequestParam(required = false) Long epoch) {
 
-        var date = LocalDate.of(year, month, 1).atStartOfDay();
+        log.info("dateStart: {}", dateStart);
+        log.info("dateEnd: {}", dateEnd);
+        log.info("epoch: {}", epoch);
 
-        var slotFrom = slotConversionService.toSlot(date);
-        var slotTo = slotConversionService.toSlot(date.plusMonths(1));
-
-        ProtocolScooperStats protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsBetweenSlots(slotFrom, slotTo), limit);
-
-        return ResponseEntity.ok(protocolScooperStats);
-
-    }
-
-    @Operation(description = "Provide scoopers statistics for a given day")
-    @GetMapping("/stats/{year}/{month}/{day}")
-    public ResponseEntity<ProtocolScooperStats> getGivenDayStats(
-            @PathVariable int year,
-            @PathVariable int month,
-            @PathVariable int day,
-            @RequestParam(required = false) Long limit) {
-
-        var date = LocalDate.of(year, month, day).atStartOfDay();
-
-        var slotFrom = slotConversionService.toSlot(date);
-        var slotTo = slotConversionService.toSlot(date.plusDays(1));
-
-        ProtocolScooperStats protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsBetweenSlots(slotFrom, slotTo), limit);
+        ProtocolScooperStats protocolScooperStats;
+        if (epoch != null && (dateStart != null || dateEnd != null)) {
+            return ResponseEntity.badRequest().body("Cannot mix up epoch and date range filtering");
+        } else if (epoch != null) {
+            protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsByEpoch(epoch));
+        } else {
+            var slotFrom = dateStart == null ? 0L : slotConversionService.toSlot(dateStart.atStartOfDay());
+            var slotTo = dateEnd == null ? Long.MAX_VALUE : slotConversionService.toSlot(dateEnd.atStartOfDay());
+            protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsBetweenSlots(slotFrom, slotTo));
+        }
 
         return ResponseEntity.ok(protocolScooperStats);
 
