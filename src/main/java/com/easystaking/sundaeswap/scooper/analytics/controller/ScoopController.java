@@ -119,28 +119,38 @@ public class ScoopController {
 
     }
 
-    @Operation(description = "Provide monthly scooper statistics")
-    @GetMapping("/stats/{monthYear}/month")
-    public ResponseEntity<ProtocolScooperStats> getMonthlyStats(
-            @Parameter(description = "A date containing the month for the reporting in ISO format: YYYY-MM-DD",
-                    example = "2024-06-01")
-            @PathVariable String monthYear,
-            @RequestParam(required = false) Integer limit) {
+    @Operation(description = "Provide scoopers statistics for a given month")
+    @GetMapping("/stats/{year}/{month}")
+    public ResponseEntity<ProtocolScooperStats> getGivenMonthStats(
+            @PathVariable int year,
+            @PathVariable int month,
+            @RequestParam(required = false) Long limit) {
 
-        var monthDate = LocalDate.parse(monthYear);
-        var firstDayOfTheMonth = monthDate.withDayOfMonth(1);
-        log.info("firstDayOfTheMonth: {}", firstDayOfTheMonth);
-        var firstDayFollowingMonth = firstDayOfTheMonth.plusMonths(1);
-        log.info("firstDayFollowingMonth: {}", firstDayFollowingMonth);
+        var date = LocalDate.of(year, month, 1).atStartOfDay();
 
-        var actualLimit = limit != null ? limit : Long.MAX_VALUE;
+        var slotFrom = slotConversionService.toSlot(date);
+        var slotTo = slotConversionService.toSlot(date.plusMonths(1));
 
-        var slotFrom = slotConversionService.toSlot(firstDayOfTheMonth.atStartOfDay());
-        log.info("slotFrom: {}", slotFrom);
-        var slotTo = slotConversionService.toSlot(firstDayFollowingMonth.atStartOfDay());
-        log.info("slotTo: {}", slotTo);
+        ProtocolScooperStats protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsBetweenSlots(slotFrom, slotTo), limit);
 
-        ProtocolScooperStats protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsBetweenSlots(slotFrom, slotTo), actualLimit);
+        return ResponseEntity.ok(protocolScooperStats);
+
+    }
+
+    @Operation(description = "Provide scoopers statistics for a given day")
+    @GetMapping("/stats/{year}/{month}/{day}")
+    public ResponseEntity<ProtocolScooperStats> getGivenDayStats(
+            @PathVariable int year,
+            @PathVariable int month,
+            @PathVariable int day,
+            @RequestParam(required = false) Long limit) {
+
+        var date = LocalDate.of(year, month, day).atStartOfDay();
+
+        var slotFrom = slotConversionService.toSlot(date);
+        var slotTo = slotConversionService.toSlot(date.plusDays(1));
+
+        ProtocolScooperStats protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsBetweenSlots(slotFrom, slotTo), limit);
 
         return ResponseEntity.ok(protocolScooperStats);
 
