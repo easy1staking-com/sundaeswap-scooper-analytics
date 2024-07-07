@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static java.util.Objects.requireNonNullElse;
-
 @RestController
 @RequestMapping("/scoops")
 @AllArgsConstructor
@@ -38,15 +36,22 @@ public class ScoopController {
 
     @GetMapping
     public ResponseEntity<List<Scoop>> get(@RequestParam(required = false) String scooperPubKeyHash,
-                                           @RequestParam(required = false) Long slot,
-                                           @RequestParam(required = false, defaultValue = "25") Integer limit) {
-        log.info("scooperPubKeyHash: {}", scooperPubKeyHash);
-        Long actualSlot = requireNonNullElse(slot, Long.MAX_VALUE);
+                                           @Parameter(description = "the start date, in ISO format, to calculate scoopers statistics", example = "2024-04-16")
+                                           @RequestParam(required = false, name = "date_start") LocalDate dateStart,
+                                           @Parameter(description = "the end date (excluded), in ISO format, to calculate scoopers statistics", example = "2024-06-24")
+                                           @RequestParam(required = false, name = "date_end") LocalDate dateEnd,
+                                           @RequestParam(required = false) Integer limit) {
+
+        var actualLimit = limit == null ? Integer.MAX_VALUE : limit;
+
+        var slotFrom = dateStart == null ? 0L : slotConversionService.toSlot(dateStart.atStartOfDay());
+        var slotTo = dateEnd == null ? Long.MAX_VALUE : slotConversionService.toSlot(dateEnd.atStartOfDay());
+
         List<Scoop> scoops;
         if (scooperPubKeyHash == null || scooperPubKeyHash.isBlank()) {
-            scoops = scoopRepository.findAllBySlotLessThanOrderBySlotDesc(actualSlot, Limit.of(limit));
+            scoops = scoopRepository.findAllBySlotBetweenOrderBySlotDesc(slotFrom, slotTo, Limit.of(actualLimit));
         } else {
-            scoops = scoopRepository.findAllByScooperPubKeyHashAndSlotLessThanOrderBySlotDesc(scooperPubKeyHash, actualSlot, Limit.of(limit));
+            scoops = scoopRepository.findAllByScooperPubKeyHashAndSlotBetweenOrderBySlotDesc(scooperPubKeyHash, slotFrom, slotTo, Limit.of(actualLimit));
         }
         return ResponseEntity.ok(scoops);
     }

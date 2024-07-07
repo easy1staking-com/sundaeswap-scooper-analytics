@@ -13,9 +13,15 @@ import java.util.Optional;
 @Repository
 public interface ScoopRepository extends JpaRepository<Scoop, String> {
 
+    // V1
     List<Scoop> findAllBySlotLessThanOrderBySlotDesc(Long slot, Limit limit);
 
     List<Scoop> findAllByScooperPubKeyHashAndSlotLessThanOrderBySlotDesc(String scooperPubKeyHash, Long slot, Limit limit);
+
+    //V2
+    List<Scoop> findAllBySlotBetweenOrderBySlotDesc(Long slotFrom, Long slotTo, Limit limit);
+
+    List<Scoop> findAllByScooperPubKeyHashAndSlotBetweenOrderBySlotDesc(String scooperPubKeyHash, Long slotFrom, Long slotTo, Limit limit);
 
     @Query("SELECT scooperPubKeyHash AS pubKeyHash, count(1) AS totalScoops, sum(orders) AS totalOrders, " +
             "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee " +
