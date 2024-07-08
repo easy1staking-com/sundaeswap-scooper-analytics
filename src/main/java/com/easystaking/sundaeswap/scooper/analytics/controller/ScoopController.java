@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,23 +36,33 @@ public class ScoopController {
     private final SlotConversionService slotConversionService;
 
     @GetMapping
-    public ResponseEntity<List<Scoop>> get(@RequestParam(required = false) String scooperPubKeyHash,
+    public ResponseEntity<List<Scoop>> get(@RequestParam(required = false, name = "scooper_pub_key_hash") String scooperPubKeyHash,
                                            @Parameter(description = "the start date, in ISO format, to calculate scoopers statistics", example = "2024-04-16")
                                            @RequestParam(required = false, name = "date_start") LocalDate dateStart,
                                            @Parameter(description = "the end date (excluded), in ISO format, to calculate scoopers statistics", example = "2024-06-24")
                                            @RequestParam(required = false, name = "date_end") LocalDate dateEnd,
+                                           @RequestParam(required = false, defaultValue = "ASC") String sort,
                                            @RequestParam(required = false) Integer limit) {
 
         var actualLimit = limit == null ? Integer.MAX_VALUE : limit;
+        log.info("date range, from: {}, to: {}", dateStart, dateEnd);
 
         var slotFrom = dateStart == null ? 0L : slotConversionService.toSlot(dateStart.atStartOfDay());
         var slotTo = dateEnd == null ? Long.MAX_VALUE : slotConversionService.toSlot(dateEnd.atStartOfDay());
+        log.info("slot range, from: {}, to: {}", slotFrom, slotTo);
+
+        Sort sortBy;
+        if (sort != null && sort.equals("DESC")) {
+            sortBy = Sort.by(Sort.Order.desc("slot"));
+        } else {
+            sortBy = Sort.by(Sort.Order.asc("slot"));
+        }
 
         List<Scoop> scoops;
         if (scooperPubKeyHash == null || scooperPubKeyHash.isBlank()) {
-            scoops = scoopRepository.findAllBySlotBetweenOrderBySlotDesc(slotFrom, slotTo, Limit.of(actualLimit));
+            scoops = scoopRepository.findAllBySlotBetween(slotFrom, slotTo, sortBy, Limit.of(actualLimit));
         } else {
-            scoops = scoopRepository.findAllByScooperPubKeyHashAndSlotBetweenOrderBySlotDesc(scooperPubKeyHash, slotFrom, slotTo, Limit.of(actualLimit));
+            scoops = scoopRepository.findAllByScooperPubKeyHashAndSlotBetween(scooperPubKeyHash, slotFrom, slotTo, sortBy, Limit.of(actualLimit));
         }
         return ResponseEntity.ok(scoops);
     }

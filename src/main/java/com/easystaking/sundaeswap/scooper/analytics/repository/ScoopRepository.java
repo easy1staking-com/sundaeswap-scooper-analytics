@@ -3,6 +3,7 @@ package com.easystaking.sundaeswap.scooper.analytics.repository;
 import com.easystaking.sundaeswap.scooper.analytics.entity.Scoop;
 import com.easystaking.sundaeswap.scooper.analytics.model.ScooperStats;
 import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -19,9 +20,9 @@ public interface ScoopRepository extends JpaRepository<Scoop, String> {
     List<Scoop> findAllByScooperPubKeyHashAndSlotLessThanOrderBySlotDesc(String scooperPubKeyHash, Long slot, Limit limit);
 
     //V2
-    List<Scoop> findAllBySlotBetweenOrderBySlotDesc(Long slotFrom, Long slotTo, Limit limit);
+    List<Scoop> findAllBySlotBetween(Long slotFrom, Long slotTo, Sort sort, Limit limit);
 
-    List<Scoop> findAllByScooperPubKeyHashAndSlotBetweenOrderBySlotDesc(String scooperPubKeyHash, Long slotFrom, Long slotTo, Limit limit);
+    List<Scoop> findAllByScooperPubKeyHashAndSlotBetween(String scooperPubKeyHash, Long slotFrom, Long slotTo, Sort sort, Limit limit);
 
     @Query("SELECT scooperPubKeyHash AS pubKeyHash, count(1) AS totalScoops, sum(orders) AS totalOrders, " +
             "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee " +
