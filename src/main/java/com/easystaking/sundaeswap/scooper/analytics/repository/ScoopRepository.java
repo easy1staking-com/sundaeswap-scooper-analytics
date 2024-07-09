@@ -14,11 +14,6 @@ import java.util.Optional;
 @Repository
 public interface ScoopRepository extends JpaRepository<Scoop, String> {
 
-    // V1
-    List<Scoop> findAllBySlotLessThanOrderBySlotDesc(Long slot, Limit limit);
-
-    List<Scoop> findAllByScooperPubKeyHashAndSlotLessThanOrderBySlotDesc(String scooperPubKeyHash, Long slot, Limit limit);
-
     //V2
     List<Scoop> findAllBySlotBetween(Long slotFrom, Long slotTo, Sort sort, Limit limit);
 
@@ -52,4 +47,5 @@ public interface ScoopRepository extends JpaRepository<Scoop, String> {
 
     Optional<Scoop> findAllByOrderBySlotDesc(Limit limit);
 
+    Long deleteBySlotGreaterThan(Long slot);
 }

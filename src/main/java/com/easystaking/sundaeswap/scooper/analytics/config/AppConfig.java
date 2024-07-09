@@ -3,7 +3,6 @@ package com.easystaking.sundaeswap.scooper.analytics.config;
 import lombok.Getter;
 import org.cardanofoundation.conversions.CardanoConverters;
 import org.cardanofoundation.conversions.ClasspathConversionsFactory;
-import org.cardanofoundation.conversions.ConversionsConfig;
 import org.cardanofoundation.conversions.domain.NetworkType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -15,13 +14,13 @@ public class AppConfig {
 
     @Component
     @Getter
-    public static class BlockStreamerConfig {
+    public static class CardanoNodeConfig {
 
-        @Value("${block-streamer.host}")
-        private String blockStreamerHost;
+        @Value("${cardano.node.host}")
+        private String cardanoNodeHost;
 
-        @Value("${block-streamer.port}")
-        private Integer blockStreamerPort;
+        @Value("${cardano.node.port}")
+        private Integer cardanoNodePort;
 
     }
 

@@ -2,12 +2,15 @@ package com.easystaking.sundaeswap.scooper.analytics.service;
 
 import com.bloxbean.cardano.client.backend.blockfrost.service.BFBackendService;
 import com.bloxbean.cardano.client.common.model.Networks;
-import com.bloxbean.cardano.yaci.core.common.NetworkType;
+import com.bloxbean.cardano.yaci.core.model.Block;
+import com.bloxbean.cardano.yaci.core.model.Era;
 import com.bloxbean.cardano.yaci.core.model.TransactionBody;
 import com.bloxbean.cardano.yaci.core.model.Witnesses;
 import com.bloxbean.cardano.yaci.core.protocol.chainsync.messages.Point;
 import com.bloxbean.cardano.yaci.core.protocol.handshake.util.N2NVersionTableConstant;
-import com.bloxbean.cardano.yaci.helper.reactive.BlockStreamer;
+import com.bloxbean.cardano.yaci.helper.BlockSync;
+import com.bloxbean.cardano.yaci.helper.listener.BlockChainDataListener;
+import com.bloxbean.cardano.yaci.helper.model.Transaction;
 import com.easystaking.sundaeswap.scooper.analytics.config.AppConfig;
 import com.easystaking.sundaeswap.scooper.analytics.entity.Scoop;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
@@ -22,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.bloxbean.cardano.yaci.core.common.Constants.*;
 import static com.bloxbean.cardano.yaci.core.model.RedeemerTag.Spend;
 
 @Component
@@ -46,7 +50,7 @@ public class SundaeswapBlockProcessor {
 
     private final CardanoConverters cardanoConverters;
 
-    private final AppConfig.BlockStreamerConfig blockStreamerConfig;
+    private final AppConfig.CardanoNodeConfig cardanoNodeConfig;
 
     private Point getInitialPoint() {
         Optional<Scoop> lastPersistedScoop = scoopRepository.findAllByOrderBySlotDesc(Limit.of(1));
@@ -76,18 +80,17 @@ public class SundaeswapBlockProcessor {
         return point;
     }
 
-    private BlockStreamer getBlockStreamer() {
-        var point = getInitialPoint();
-        BlockStreamer streamer;
-        if (blockStreamerConfig.getBlockStreamerHost() != null && blockStreamerConfig.getBlockStreamerPort() != null) {
-            log.info("INIT - connecting to node, host: {}, port: {}", blockStreamerConfig.getBlockStreamerHost(), blockStreamerConfig.getBlockStreamerPort());
-            streamer = BlockStreamer.fromPoint(blockStreamerConfig.getBlockStreamerHost(),
-                    blockStreamerConfig.getBlockStreamerPort(),
-                    point,
+    private BlockSync blockSync() {
+        BlockSync streamer;
+        if (cardanoNodeConfig.getCardanoNodeHost() != null && cardanoNodeConfig.getCardanoNodePort() != null) {
+            log.info("INIT - connecting to node, host: {}, port: {}", cardanoNodeConfig.getCardanoNodeHost(), cardanoNodeConfig.getCardanoNodePort());
+            streamer = new BlockSync(cardanoNodeConfig.getCardanoNodeHost(),
+                    cardanoNodeConfig.getCardanoNodePort(),
+                    WELL_KNOWN_MAINNET_POINT,
                     N2NVersionTableConstant.v4AndAbove(Networks.mainnet().getProtocolMagic()));
         } else {
             log.info("INIT - no custom node configure, connecting to IOG's relay");
-            streamer = BlockStreamer.fromPoint(NetworkType.MAINNET, point);
+            streamer = new BlockSync(MAINNET_IOHK_RELAY_ADDR, MAINNET_IOHK_RELAY_PORT, WELL_KNOWN_MAINNET_POINT, N2NVersionTableConstant.v4AndAbove(Networks.mainnet().getProtocolMagic()));
         }
         return streamer;
     }
@@ -95,60 +98,65 @@ public class SundaeswapBlockProcessor {
     @PostConstruct
     public void start() throws Exception {
 
+        var point = getInitialPoint();
+
         List<String> allowedScooperPubKeyHashes = scooperService.getAllowedScooperPubKeyHashes();
 
-        getBlockStreamer()
-                .stream()
-                .subscribe(block -> {
+        blockSync()
+                .startSync(point, new BlockChainDataListener() {
+                    @Override
+                    public void onBlock(Era era, Block block, List<Transaction> transactions) {
 
-                    var epoch = cardanoConverters.slot().slotToEpoch(block.getHeader().getHeaderBody().getSlot());
+                        var epoch = cardanoConverters.slot().slotToEpoch(block.getHeader().getHeaderBody().getSlot());
 
-                    if (block.getHeader().getHeaderBody().getBlockNumber() % 10 == 0) {
-                        log.info("Processing block epoch/number: {}/{}", epoch, block.getHeader().getHeaderBody().getBlockNumber());
-                    }
+                        if (block.getHeader().getHeaderBody().getBlockNumber() % 10 == 0) {
+                            log.info("Processing block epoch/number: {}/{}", epoch, block.getHeader().getHeaderBody().getBlockNumber());
+                        }
 
-                    for (int i = 0; i < block.getTransactionBodies().size(); i++) {
-                        TransactionBody transactionBody = block.getTransactionBodies().get(i);
+                        for (int i = 0; i < block.getTransactionBodies().size(); i++) {
+                            TransactionBody transactionBody = block.getTransactionBodies().get(i);
 
-                        if (transactionBody
-                                .getOutputs()
-                                .stream()
-                                .anyMatch(transactionOutput -> transactionOutput.getAddress().equals(SUNDAE_POOL_ADDRESS))) {
+                            if (transactionBody
+                                    .getOutputs()
+                                    .stream()
+                                    .anyMatch(transactionOutput -> transactionOutput.getAddress().equals(SUNDAE_POOL_ADDRESS))) {
 
-                            Set<String> requiredSigners = transactionBody.getRequiredSigners();
-                            Witnesses witnesses = block.getTransactionWitness().get(i);
-                            if (witnesses != null && requiredSigners != null && !requiredSigners.isEmpty()) {
+                                Set<String> requiredSigners = transactionBody.getRequiredSigners();
+                                Witnesses witnesses = block.getTransactionWitness().get(i);
+                                if (witnesses != null && requiredSigners != null && !requiredSigners.isEmpty()) {
 
-                                var orders = witnesses.getRedeemers()
-                                        .stream()
-                                        .filter(redeemer -> redeemer.getTag().equals(Spend))
-                                        .count() - 1;
+                                    var orders = witnesses.getRedeemers()
+                                            .stream()
+                                            .filter(redeemer -> redeemer.getTag().equals(Spend))
+                                            .count() - 1;
 
-                                if (orders <= 0) {
-                                    log.warn("Unexpected number of orders ({}) for tx: {}", orders, transactionBody.getTxHash());
-                                }
-
-                                requiredSigners.forEach(signer -> {
-
-                                    if (allowedScooperPubKeyHashes.contains(signer)) {
-
-                                        var protocolFee = SCOOP_BASE_FEE + orders * SCOOP_INCREMENTAL_FEE;
-
-                                        Scoop dbScoop = Scoop.builder()
-                                                .txHash(transactionBody.getTxHash())
-                                                .scooperPubKeyHash(signer)
-                                                .orders(orders)
-                                                .protocolFee(protocolFee)
-                                                .transactionFee(transactionBody.getFee().longValue())
-                                                .epoch(epoch)
-                                                .slot(block.getHeader().getHeaderBody().getSlot())
-                                                .version(3L)
-                                                .build();
-
-                                        scoopRepository.save(dbScoop);
-
+                                    if (orders <= 0) {
+                                        log.warn("Unexpected number of orders ({}) for tx: {}", orders, transactionBody.getTxHash());
                                     }
-                                });
+
+                                    requiredSigners.forEach(signer -> {
+
+                                        if (allowedScooperPubKeyHashes.contains(signer)) {
+
+                                            var protocolFee = SCOOP_BASE_FEE + orders * SCOOP_INCREMENTAL_FEE;
+
+                                            Scoop dbScoop = Scoop.builder()
+                                                    .txHash(transactionBody.getTxHash())
+                                                    .scooperPubKeyHash(signer)
+                                                    .orders(orders)
+                                                    .protocolFee(protocolFee)
+                                                    .transactionFee(transactionBody.getFee().longValue())
+                                                    .epoch(epoch)
+                                                    .slot(block.getHeader().getHeaderBody().getSlot())
+                                                    .version(3L)
+                                                    .build();
+
+                                            scoopRepository.save(dbScoop);
+
+                                        }
+                                    });
+
+                                }
 
                             }
 
@@ -156,7 +164,11 @@ public class SundaeswapBlockProcessor {
 
                     }
 
-
+                    @Override
+                    public void onRollback(Point point) {
+                        log.info("rollback to slot: {}", point.getSlot());
+                        scoopRepository.deleteBySlotGreaterThan(point.getSlot());
+                    }
                 });
 
 
