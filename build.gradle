@@ -27,7 +27,7 @@ dependencies {
 
 	implementation("org.cardanofoundation:cf-cardano-conversions-java:1.1.1")
 
-	implementation('com.bloxbean.cardano:yaci:0.3.0-beta13')
+	implementation('com.bloxbean.cardano:yaci:0.3.0-beta14')
 	implementation('com.bloxbean.cardano:cardano-client-lib:0.5.1')
 	implementation('com.bloxbean.cardano:cardano-client-backend-blockfrost:0.5.1')
 
