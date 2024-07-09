@@ -107,10 +107,11 @@ public class SundaeswapBlockProcessor {
                     @Override
                     public void onBlock(Era era, Block block, List<Transaction> transactions) {
 
-                        var epoch = cardanoConverters.slot().slotToEpoch(block.getHeader().getHeaderBody().getSlot());
+                        var slot = block.getHeader().getHeaderBody().getSlot();
+                        var epoch = cardanoConverters.slot().slotToEpoch(slot);
 
                         if (block.getHeader().getHeaderBody().getBlockNumber() % 10 == 0) {
-                            log.info("Processing block epoch/number: {}/{}", epoch, block.getHeader().getHeaderBody().getBlockNumber());
+                            log.info("Processing block slot/epoch/number: {}/{}/{}", slot, epoch, block.getHeader().getHeaderBody().getBlockNumber());
                         }
 
                         for (int i = 0; i < block.getTransactionBodies().size(); i++) {
@@ -166,8 +167,8 @@ public class SundaeswapBlockProcessor {
 
                     @Override
                     public void onRollback(Point point) {
-                        log.info("rollback to slot: {}", point.getSlot());
-                        scoopRepository.deleteBySlotGreaterThan(point.getSlot());
+                        var numDeletedScoops = scoopRepository.deleteBySlotGreaterThan(point.getSlot());
+                        log.info("rollback to slot: {}, numDeletedScoops: {}", point.getSlot(), numDeletedScoops);
                     }
                 });
 
