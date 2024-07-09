@@ -41,6 +41,8 @@ public class ScoopController {
                                            @RequestParam(required = false, name = "date_start") LocalDate dateStart,
                                            @Parameter(description = "the end date (excluded), in ISO format, to calculate scoopers statistics", example = "2024-06-24")
                                            @RequestParam(required = false, name = "date_end") LocalDate dateEnd,
+                                           @Parameter(description = "The way scoops should be sorted based on slot number, accepted values are ASC and DESC, " +
+                                                   "where ASC is the natural chronological order and DESC the reverse", example = "DESC")
                                            @RequestParam(required = false, defaultValue = "ASC") String sort,
                                            @RequestParam(required = false) Integer limit) {
 
