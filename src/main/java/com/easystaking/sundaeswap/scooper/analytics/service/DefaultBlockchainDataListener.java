@@ -105,8 +105,12 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
     @Transactional
     @Override
     public void onRollback(Point point) {
-        var numDeletedScoops = scoopRepository.deleteBySlotGreaterThan(point.getSlot());
-        log.info("rollback to slot: {}, numDeletedScoops: {}", point.getSlot(), numDeletedScoops);
+        if (point.getSlot() > 0 && point.getHash() != null) {
+            var numDeletedScoops = scoopRepository.deleteBySlotGreaterThan(point.getSlot());
+            log.info("rollback to slot: {}, numDeletedScoops: {}", point.getSlot(), numDeletedScoops);
+        } else {
+            log.info("ignoring invalid rollback");
+        }
     }
 
     @PostConstruct
