@@ -10,6 +10,7 @@ public record ProtocolScooperStats(Long totalScoops,
                                    Long totalOrders,
                                    Long totalProtocolFee,
                                    Long totalTransactionFee,
+                                   Long totalNumMempoolOrders,
                                    List<ExtendedScooperStats> scooperStats) {
 
 }
