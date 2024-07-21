@@ -47,6 +47,8 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
         var slot = block.getHeader().getHeaderBody().getSlot();
         var epoch = cardanoConverters.slot().slotToEpoch(slot);
 
+        var blockTxHashes = block.getTransactionBodies().stream().map(TransactionBody::getTxHash).toList();
+
         if (block.getHeader().getHeaderBody().getBlockNumber() % 10 == 0) {
             log.info("Processing block slot/epoch/number: {}/{}/{}", slot, epoch, block.getHeader().getHeaderBody().getBlockNumber());
         }
@@ -76,6 +78,13 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
 
                         if (allowedScooperPubKeyHashes.contains(signer)) {
 
+                            // This is a scoop
+                            var numMempoolOrders = transactionBody
+                                    .getInputs()
+                                    .stream()
+                                    .filter(transactionInput -> blockTxHashes.contains(transactionInput.getTransactionId()))
+                                    .count();
+
                             var protocolFee = SCOOP_BASE_FEE + orders * SCOOP_INCREMENTAL_FEE;
 
                             Scoop dbScoop = Scoop.builder()
@@ -87,6 +96,7 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
                                     .epoch(epoch)
                                     .slot(block.getHeader().getHeaderBody().getSlot())
                                     .version(3L)
+                                    .numMempoolOrders(numMempoolOrders)
                                     .build();
 
                             scoopRepository.save(dbScoop);

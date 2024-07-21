@@ -14,4 +14,5 @@ public interface ScooperStats {
 
     Long getTotalTransactionFee();
 
+    Long getTotalNumMempoolOrders();
 }

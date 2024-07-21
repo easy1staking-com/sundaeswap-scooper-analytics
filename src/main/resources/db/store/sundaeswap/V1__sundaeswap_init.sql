@@ -4,6 +4,7 @@ CREATE TABLE scoops (
     orders BIGINT NOT NULL,
     protocol_fee BIGINT NOT NULL,
     transaction_fee BIGINT NOT NULL,
+    num_mempool_orders BIGINT NOT NULL,
     slot BIGINT NOT NULL,
     epoch BIGINT NOT NULL,
     version BIGINT NOT NULL

@@ -20,26 +20,26 @@ public interface ScoopRepository extends JpaRepository<Scoop, String> {
     List<Scoop> findAllByScooperPubKeyHashAndSlotBetween(String scooperPubKeyHash, Long slotFrom, Long slotTo, Sort sort, Limit limit);
 
     @Query("SELECT scooperPubKeyHash AS pubKeyHash, count(1) AS totalScoops, sum(orders) AS totalOrders, " +
-            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee " +
+            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee, sum(numMempoolOrders) AS totalNumMempoolOrders " +
             "FROM Scoop GROUP BY scooperPubKeyHash")
     List<ScooperStats> findScooperStats();
 
     @Query("SELECT scooperPubKeyHash AS pubKeyHash, count(1) AS totalScoops, sum(orders) AS totalOrders, " +
-            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee " +
+            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee, sum(numMempoolOrders) AS totalNumMempoolOrders " +
             "FROM Scoop " +
             "WHERE epoch = :epoch " +
             "GROUP BY scooperPubKeyHash, epoch ")
     List<ScooperStats> findScooperStatsByEpoch(Long epoch);
 
     @Query("SELECT scooperPubKeyHash AS pubKeyHash, count(1) AS totalScoops, sum(orders) AS totalOrders, " +
-            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee " +
+            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee, sum(numMempoolOrders) AS totalNumMempoolOrders " +
             "FROM Scoop " +
             "WHERE slot > :slot " +
             "GROUP BY scooperPubKeyHash ")
     List<ScooperStats> findScooperStatsFromSlot(Long slot);
 
     @Query("SELECT scooperPubKeyHash AS pubKeyHash, count(1) AS totalScoops, sum(orders) AS totalOrders, " +
-            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee " +
+            "sum(protocolFee) as totalProtocolFee, sum(transactionFee) as totalTransactionFee, sum(numMempoolOrders) AS totalNumMempoolOrders " +
             "FROM Scoop " +
             "WHERE slot between :slotFrom and :slotTo " +
             "GROUP BY scooperPubKeyHash ")

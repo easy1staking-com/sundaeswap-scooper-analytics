@@ -33,4 +33,6 @@ public class Scoop {
 
     private Long version;
 
+    private Long numMempoolOrders;
+
 }
