@@ -1,6 +1,7 @@
 package com.easystaking.sundaeswap.scooper.analytics.repository;
 
 import com.easystaking.sundaeswap.scooper.analytics.entity.Scoop;
+import com.easystaking.sundaeswap.scooper.analytics.entity.projections.ScooperPeriodStats;
 import com.easystaking.sundaeswap.scooper.analytics.model.ScooperStats;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Sort;
@@ -48,4 +49,10 @@ public interface ScoopRepository extends JpaRepository<Scoop, String> {
     Optional<Scoop> findAllByOrderBySlotDesc(Limit limit);
 
     Long deleteBySlotGreaterThan(Long slot);
+
+
+    @Query("SELECT ((slot - :slotTo) / :periodLength) AS period, SUM ( CASE WHEN scooperPubKeyHash = :scooperPubKeyHash THEN 1 ELSE 0 END ) AS scooperNumberScoops, " +
+            "count(1)  AS totalNumberScoops FROM Scoop WHERE slot BETWEEN :slotFrom and :slotTo GROUP BY period ORDER BY period DESC")
+    List<ScooperPeriodStats> getScooperPeriodStats(String scooperPubKeyHash, Long slotFrom, Long slotTo, Long periodLength);
+
 }

@@ -4,10 +4,13 @@ import com.bloxbean.cardano.client.address.AddressProvider;
 import com.bloxbean.cardano.client.address.Credential;
 import com.bloxbean.cardano.client.common.model.Networks;
 import com.easystaking.sundaeswap.scooper.analytics.entity.Scoop;
+import com.easystaking.sundaeswap.scooper.analytics.entity.projections.ScooperPeriodStats;
 import com.easystaking.sundaeswap.scooper.analytics.model.ExtendedScooperStats;
+import com.easystaking.sundaeswap.scooper.analytics.model.PeriodType;
 import com.easystaking.sundaeswap.scooper.analytics.model.ProtocolScooperStats;
 import com.easystaking.sundaeswap.scooper.analytics.model.ScooperStats;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
+import com.easystaking.sundaeswap.scooper.analytics.service.ScooperService;
 import com.easystaking.sundaeswap.scooper.analytics.service.SlotConversionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -30,6 +33,8 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 @Slf4j
 public class ScoopController {
+
+    private final ScooperService scooperService;
 
     private final ScoopRepository scoopRepository;
 
@@ -92,6 +97,24 @@ public class ScoopController {
         var totalNumMempoolOrders = sortedStats.stream().map(ExtendedScooperStats::totalNumMempoolOrders).reduce(Long::sum).orElse(0L);
 
         return new ProtocolScooperStats(totalScoops, totalOrders, totalProtocolFee, totalTransactionFee, totalNumMempoolOrders, sortedStats);
+
+    }
+
+    @Operation(description = "Provide recent scooper statistics")
+    @GetMapping("/stats/scooper/{scooperPubKeyHash}")
+    public ResponseEntity<List<ScooperPeriodStats>> getScooperPeriodStats(
+            @Parameter(description = "The pub key hash of the scooper", example = "37eb116b3ff8a70e4be778b5e8d30d3b40421ffe6622f6a983f67f3f")
+            @PathVariable String scooperPubKeyHash,
+            @Parameter(description = "Period type, month, hour, day")
+            @RequestParam(value = "period_type", required = false, defaultValue = "DAYS") String periodType,
+            @Parameter(description = "Period length")
+            @RequestParam(value = "period_length", required = false, defaultValue = "7") Integer periodLength) {
+
+        var period = PeriodType.valueOf(periodType.toUpperCase());
+
+        var stats = scooperService.getScooperStats(scooperPubKeyHash, periodLength, period);
+
+        return ResponseEntity.ok(stats);
 
     }
 
