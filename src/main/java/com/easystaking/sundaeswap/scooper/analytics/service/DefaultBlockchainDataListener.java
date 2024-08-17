@@ -8,11 +8,13 @@ import com.bloxbean.cardano.yaci.core.protocol.chainsync.messages.Point;
 import com.bloxbean.cardano.yaci.helper.listener.BlockChainDataListener;
 import com.bloxbean.cardano.yaci.helper.model.Transaction;
 import com.easystaking.sundaeswap.scooper.analytics.entity.Scoop;
+import com.easystaking.sundaeswap.scooper.analytics.entity.projections.ScooperPeriodStats;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.cardanofoundation.conversions.CardanoConverters;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +39,8 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
     private final ScoopRepository scoopRepository;
 
     private final CardanoConverters cardanoConverters;
+
+    private final SimpMessagingTemplate simpMessagingTemplate;
 
     private List<String> allowedScooperPubKeyHashes;
 
@@ -100,6 +104,12 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
                                     .build();
 
                             scoopRepository.save(dbScoop);
+
+                            try {
+                                simpMessagingTemplate.convertAndSend("/topic/messages", dbScoop);
+                            } catch (Exception e) {
+                                log.warn("Error", e);
+                            }
 
                         }
                     });

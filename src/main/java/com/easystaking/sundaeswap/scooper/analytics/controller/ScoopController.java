@@ -14,7 +14,7 @@ import com.easystaking.sundaeswap.scooper.analytics.service.ScooperService;
 import com.easystaking.sundaeswap.scooper.analytics.service.SlotConversionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Sort;
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/scoops")
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 public class ScoopController {
 
