@@ -1,5 +1,6 @@
 package com.easystaking.sundaeswap.scooper.analytics.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import org.cardanofoundation.conversions.CardanoConverters;
 import org.cardanofoundation.conversions.ClasspathConversionsFactory;
@@ -27,6 +28,11 @@ public class AppConfig {
     @Bean
     public CardanoConverters cardanoConverters() {
         return ClasspathConversionsFactory.createConverters(NetworkType.MAINNET);
+    }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
     }
 
 }

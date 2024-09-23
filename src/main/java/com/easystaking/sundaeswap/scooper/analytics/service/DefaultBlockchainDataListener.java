@@ -1,14 +1,13 @@
 package com.easystaking.sundaeswap.scooper.analytics.service;
 
-import com.bloxbean.cardano.yaci.core.model.Block;
-import com.bloxbean.cardano.yaci.core.model.Era;
-import com.bloxbean.cardano.yaci.core.model.TransactionBody;
-import com.bloxbean.cardano.yaci.core.model.Witnesses;
+import com.bloxbean.cardano.client.api.model.Utxo;
+import com.bloxbean.cardano.client.backend.blockfrost.service.BFBackendService;
+import com.bloxbean.cardano.yaci.core.model.*;
 import com.bloxbean.cardano.yaci.core.protocol.chainsync.messages.Point;
 import com.bloxbean.cardano.yaci.helper.listener.BlockChainDataListener;
 import com.bloxbean.cardano.yaci.helper.model.Transaction;
 import com.easystaking.sundaeswap.scooper.analytics.entity.Scoop;
-import com.easystaking.sundaeswap.scooper.analytics.entity.projections.ScooperPeriodStats;
+import com.easystaking.sundaeswap.scooper.analytics.model.contract.ProtocolFees;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -18,25 +17,27 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Stream;
 
 import static com.bloxbean.cardano.yaci.core.model.RedeemerTag.Spend;
+import static com.easystaking.sundaeswap.scooper.analytics.model.Constants.POOL_ADDRESS_V2;
+import static com.easystaking.sundaeswap.scooper.analytics.model.Constants.SETTINGS_NFT_POLICY_ID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class DefaultBlockchainDataListener implements BlockChainDataListener {
 
-    private static final String SUNDAE_POOL_ADDRESS = "addr1x8srqftqemf0mjlukfszd97ljuxdp44r372txfcr75wrz26rnxqnmtv3hdu2t6chcfhl2zzjh36a87nmd6dwsu3jenqsslnz7e";
+    private final Map<TransactionInput, Utxo> knownReferenceInputs = new HashMap<>();
 
-    private static final Long SCOOP_BASE_FEE = 332000L;
-
-    private static final Long SCOOP_INCREMENTAL_FEE = 168000L;
+    private final BFBackendService bfBackendService;
 
     private final ScooperService scooperService;
 
     private final ScoopRepository scoopRepository;
+
+    private final SettingsParser settingsParser;
 
     private final CardanoConverters cardanoConverters;
 
@@ -63,11 +64,20 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
             if (transactionBody
                     .getOutputs()
                     .stream()
-                    .anyMatch(transactionOutput -> transactionOutput.getAddress().equals(SUNDAE_POOL_ADDRESS))) {
+                    .anyMatch(transactionOutput -> transactionOutput.getAddress().equals(POOL_ADDRESS_V2))) {
+
+                var protocolFeesOpt = resolveProtocolFees(transactionBody.getReferenceInputs());
+                if (protocolFeesOpt.isEmpty()) {
+                    log.warn("protocolFees are unexpectedly empty");
+                    return;
+                }
+
+                var protocolFees = protocolFeesOpt.get();
 
                 Set<String> requiredSigners = transactionBody.getRequiredSigners();
                 Witnesses witnesses = block.getTransactionWitness().get(i);
                 if (witnesses != null && requiredSigners != null && !requiredSigners.isEmpty()) {
+
 
                     var orders = witnesses.getRedeemers()
                             .stream()
@@ -89,7 +99,7 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
                                     .filter(transactionInput -> blockTxHashes.contains(transactionInput.getTransactionId()))
                                     .count();
 
-                            var protocolFee = SCOOP_BASE_FEE + orders * SCOOP_INCREMENTAL_FEE;
+                            var protocolFee = protocolFees.baseFee().longValue() + orders * protocolFees.simpleFee().longValue();
 
                             Scoop dbScoop = Scoop.builder()
                                     .txHash(transactionBody.getTxHash())
@@ -136,6 +146,39 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
     @PostConstruct
     public void init() {
         allowedScooperPubKeyHashes = scooperService.getAllowedScooperPubKeyHashes();
+    }
+
+    private Optional<ProtocolFees> resolveProtocolFees(Set<TransactionInput> referenceInputs) {
+        return referenceInputs
+                .stream()
+                .flatMap(refInput -> {
+                    var utxoOpt = Optional.ofNullable(knownReferenceInputs.get(refInput));
+                    if (utxoOpt.isEmpty()) {
+                        try {
+                            var result = bfBackendService.getUtxoService().getTxOutput(refInput.getTransactionId(), refInput.getIndex());
+                            if (result.isSuccessful()) {
+                                var utxo = result.getValue();
+                                knownReferenceInputs.put(refInput, utxo);
+                                return resolveProtocolFees(utxo).stream();
+                            }
+                        } catch (Exception e) {
+                            log.warn("could not resolve ref input", e);
+                        }
+                    } else {
+                        return resolveProtocolFees(utxoOpt.get()).stream();
+                    }
+                    return Stream.empty();
+                })
+                .findAny();
+    }
+
+    private Optional<ProtocolFees> resolveProtocolFees(Utxo utxo) {
+        return utxo
+                .getAmount()
+                .stream()
+                .filter(amount -> amount.getUnit().startsWith(SETTINGS_NFT_POLICY_ID))
+                .findAny()
+                .flatMap(amount -> settingsParser.parseFees(utxo.getInlineDatum()));
     }
 
 }
