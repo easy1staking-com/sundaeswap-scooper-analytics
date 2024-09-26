@@ -40,6 +40,9 @@ dependencies {
 	// Docs
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
 
+	// CSV
+	implementation 'net.sf.supercsv:super-csv:2.4.0'
+
 	// Lombok
 	compileOnly 'org.projectlombok:lombok:1.18.32'
 	annotationProcessor 'org.projectlombok:lombok:1.18.32'

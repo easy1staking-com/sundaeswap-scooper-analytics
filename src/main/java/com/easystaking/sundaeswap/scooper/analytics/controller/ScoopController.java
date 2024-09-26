@@ -10,6 +10,7 @@ import com.easystaking.sundaeswap.scooper.analytics.model.PeriodType;
 import com.easystaking.sundaeswap.scooper.analytics.model.ProtocolScooperStats;
 import com.easystaking.sundaeswap.scooper.analytics.model.ScooperStats;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
+import com.easystaking.sundaeswap.scooper.analytics.service.CSVHelper;
 import com.easystaking.sundaeswap.scooper.analytics.service.ScooperService;
 import com.easystaking.sundaeswap.scooper.analytics.service.SlotConversionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,12 +19,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -118,6 +125,34 @@ public class ScoopController {
 
     }
 
+    @Operation(summary = "Provide scoopers statistics in csv format", description = "Provide scooper monthly stats.")
+    @GetMapping("/stats/csv")
+    public ResponseEntity<?> getMonthStatsCSV(@RequestParam(required = false, name = "month")
+                                              @DateTimeFormat(pattern = "yyyy-MM") Date month) {
+
+        var requestedMonth = Instant.ofEpochMilli(month.getTime())
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        var start = requestedMonth.atStartOfDay();
+
+        log.info("start: {}", start);
+
+        var slotFrom = slotConversionService.toSlot(start);
+        var slotTo = slotConversionService.toSlot(start.plusMonths(1));
+        var protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsBetweenSlots(slotFrom, slotTo));
+
+        var csvStats = CSVHelper.scoopersStats(protocolScooperStats.scooperStats());
+
+        var fileName = String.format("attachment; filename=scoopers-stats-%s.csv", requestedMonth);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
+                .contentType(MediaType.parseMediaType("application/csv"))
+                .body(csvStats.toByteArray());
+
+    }
+
+
     @Operation(description = "Provide recent scooper statistics")
     @GetMapping("/stats/{duration}")
     public ResponseEntity<ProtocolScooperStats> getRecentStats(
@@ -164,5 +199,6 @@ public class ScoopController {
         return ResponseEntity.ok(protocolScooperStats);
 
     }
+
 
 }
