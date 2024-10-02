@@ -128,17 +128,20 @@ public class ScoopController {
     @Operation(summary = "Provide scoopers statistics in csv format", description = "Provide scooper monthly stats.")
     @GetMapping("/stats/csv")
     public ResponseEntity<?> getMonthStatsCSV(@RequestParam(required = false, name = "month")
+                                              @Parameter(description = "The year and month of the scooper stats to download", example = "2024-09, it will mean from UTC midnight of 2024-09-01 to UTC midnight 2024-10-01")
                                               @DateTimeFormat(pattern = "yyyy-MM") Date month) {
 
         var requestedMonth = Instant.ofEpochMilli(month.getTime())
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate();
         var start = requestedMonth.atStartOfDay();
+        var end = start.plusMonths(1);
 
         log.info("start: {}", start);
+        log.info("end: {}", end);
 
         var slotFrom = slotConversionService.toSlot(start);
-        var slotTo = slotConversionService.toSlot(start.plusMonths(1));
+        var slotTo = slotConversionService.toSlot(end);
         var protocolScooperStats = protocolScooperStats(() -> scoopRepository.findScooperStatsBetweenSlots(slotFrom, slotTo));
 
         var csvStats = CSVHelper.scoopersStats(protocolScooperStats.scooperStats());
