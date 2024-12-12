@@ -26,11 +26,11 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
-	implementation("org.cardanofoundation:cf-cardano-conversions-java:1.1.1")
+	implementation("org.cardanofoundation:cf-cardano-conversions-java:1.2.0")
 
-	implementation('com.bloxbean.cardano:yaci:0.3.0')
-	implementation('com.bloxbean.cardano:cardano-client-lib:0.6.0')
-	implementation('com.bloxbean.cardano:cardano-client-backend-blockfrost:0.6.0')
+	implementation('com.bloxbean.cardano:yaci:0.3.4')
+	implementation('com.bloxbean.cardano:cardano-client-lib:0.6.2')
+	implementation('com.bloxbean.cardano:cardano-client-backend-blockfrost:0.6.2')
 
 	implementation("org.flywaydb:flyway-core")
 

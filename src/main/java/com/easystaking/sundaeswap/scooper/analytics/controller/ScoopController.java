@@ -3,7 +3,6 @@ package com.easystaking.sundaeswap.scooper.analytics.controller;
 import com.bloxbean.cardano.client.address.AddressProvider;
 import com.bloxbean.cardano.client.address.Credential;
 import com.bloxbean.cardano.client.common.model.Networks;
-import com.easystaking.sundaeswap.scooper.analytics.entity.Scoop;
 import com.easystaking.sundaeswap.scooper.analytics.entity.projections.ScooperPeriodStats;
 import com.easystaking.sundaeswap.scooper.analytics.model.ExtendedScooperStats;
 import com.easystaking.sundaeswap.scooper.analytics.model.PeriodType;
@@ -13,10 +12,13 @@ import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
 import com.easystaking.sundaeswap.scooper.analytics.service.CSVHelper;
 import com.easystaking.sundaeswap.scooper.analytics.service.ScooperService;
 import com.easystaking.sundaeswap.scooper.analytics.service.SlotConversionService;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.cardanofoundation.conversions.CardanoConverters;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,10 +27,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.*;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -41,9 +40,16 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ScoopController {
 
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record Scoop(Long timestamp, String txHash, Long numOrders, String scooperHash, Boolean isMempool) {
+
+    }
+
     private final ScooperService scooperService;
 
     private final ScoopRepository scoopRepository;
+
+    private final CardanoConverters converters;
 
     private final SlotConversionService slotConversionService;
 
@@ -72,20 +78,31 @@ public class ScoopController {
             sortBy = Sort.by(Sort.Order.asc("slot"));
         }
 
-        List<Scoop> scoops;
+        List<com.easystaking.sundaeswap.scooper.analytics.entity.Scoop> scoops;
         if (scooperPubKeyHash == null || scooperPubKeyHash.isBlank()) {
             scoops = scoopRepository.findAllBySlotBetween(slotFrom, slotTo, sortBy, Limit.of(actualLimit));
         } else {
             scoops = scoopRepository.findAllByScooperPubKeyHashAndSlotBetween(scooperPubKeyHash, slotFrom, slotTo, sortBy, Limit.of(actualLimit));
         }
-        return ResponseEntity.ok(scoops);
+
+        var modelScoops = scoops.stream().map(scoop -> {
+            var dateTime = converters.slot().slotToTime(scoop.getSlot());
+            var timestamp = dateTime.toEpochSecond(ZoneOffset.UTC);
+            return new Scoop(timestamp, scoop.getTxHash(), scoop.getOrders(), scoop.getScooperPubKeyHash(), scoop.getNumMempoolOrders() > 0);
+        }).toList();
+
+        return ResponseEntity.ok(modelScoops);
     }
 
     @GetMapping("/{txHash}")
     public ResponseEntity<Scoop> getByTxHash(@PathVariable String txHash) {
         log.info("txHash: {}", txHash);
         var scoopOpt = scoopRepository.findById(txHash);
-        return scoopOpt.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return scoopOpt.map(scoop -> {
+            var dateTime = converters.slot().slotToTime(scoop.getSlot());
+            var timestamp = dateTime.toEpochSecond(ZoneOffset.UTC);
+            return new Scoop(timestamp, scoop.getTxHash(), scoop.getOrders(), scoop.getScooperPubKeyHash(), scoop.getNumMempoolOrders() > 0);
+        }).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     private ProtocolScooperStats protocolScooperStats(Supplier<List<ScooperStats>> scooperStatsSupplier) {
