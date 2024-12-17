@@ -17,6 +17,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -115,8 +116,16 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
 
                             scoopRepository.save(dbScoop);
 
+
                             try {
-                                simpMessagingTemplate.convertAndSend("/topic/messages", dbScoop);
+                                var timestamp = cardanoConverters.slot().slotToTime(block.getHeader().getHeaderBody().getSlot()).toEpochSecond(ZoneOffset.UTC) * 1_000;
+                                var scoop = new com.easystaking.sundaeswap.scooper.analytics.model.Scoop(timestamp,
+                                        dbScoop.getTxHash(),
+                                        dbScoop.getOrders(),
+                                        dbScoop.getScooperPubKeyHash(),
+                                        numMempoolOrders > 0L);
+
+                                simpMessagingTemplate.convertAndSend("/topic/messages", scoop);
                             } catch (Exception e) {
                                 log.warn("Error", e);
                             }

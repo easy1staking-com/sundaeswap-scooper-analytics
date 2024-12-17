@@ -4,16 +4,11 @@ import com.bloxbean.cardano.client.address.AddressProvider;
 import com.bloxbean.cardano.client.address.Credential;
 import com.bloxbean.cardano.client.common.model.Networks;
 import com.easystaking.sundaeswap.scooper.analytics.entity.projections.ScooperPeriodStats;
-import com.easystaking.sundaeswap.scooper.analytics.model.ExtendedScooperStats;
-import com.easystaking.sundaeswap.scooper.analytics.model.PeriodType;
-import com.easystaking.sundaeswap.scooper.analytics.model.ProtocolScooperStats;
-import com.easystaking.sundaeswap.scooper.analytics.model.ScooperStats;
+import com.easystaking.sundaeswap.scooper.analytics.model.*;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
 import com.easystaking.sundaeswap.scooper.analytics.service.CSVHelper;
 import com.easystaking.sundaeswap.scooper.analytics.service.ScooperService;
 import com.easystaking.sundaeswap.scooper.analytics.service.SlotConversionService;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
@@ -39,11 +34,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class ScoopController {
-
-    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-    public record Scoop(Long timestamp, String txHash, Long numOrders, String scooperHash, Boolean isMempool) {
-
-    }
 
     private final ScooperService scooperService;
 
