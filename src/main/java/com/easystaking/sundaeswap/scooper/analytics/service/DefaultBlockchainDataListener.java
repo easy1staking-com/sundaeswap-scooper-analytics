@@ -69,15 +69,18 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
             if (transactionBody
                     .getOutputs()
                     .stream()
-                    .anyMatch(transactionOutput -> {
-                        if (transactionOutput.getAddress() != null) {
-                            var address = new Address(transactionOutput.getAddress());
+                    .flatMap(transactionOutput -> Optional.ofNullable(transactionOutput.getAddress()).stream())
+                    .filter(address -> address.startsWith("addr1"))
+                    .anyMatch(shelleyStringAddress -> {
+                        try {
+                            var address = new Address(shelleyStringAddress);
                             if (List.of(Base, Enterprise).contains(address.getAddressType())) {
                                 return HexUtil.encodeHexString(address.getPaymentCredentialHash().get()).equals(POOL_NFT_POLICY_ID);
                             } else {
                                 return false;
                             }
-                        } else {
+                        } catch (Exception e) {
+                            log.warn("Error while processing address: {}", shelleyStringAddress);
                             return false;
                         }
                     })) {
