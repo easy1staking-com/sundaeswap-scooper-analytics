@@ -1,7 +1,9 @@
 package com.easystaking.sundaeswap.scooper.analytics.service;
 
+import com.bloxbean.cardano.client.address.Address;
 import com.bloxbean.cardano.client.api.model.Utxo;
 import com.bloxbean.cardano.client.backend.blockfrost.service.BFBackendService;
+import com.bloxbean.cardano.client.util.HexUtil;
 import com.bloxbean.cardano.yaci.core.model.*;
 import com.bloxbean.cardano.yaci.core.protocol.chainsync.messages.Point;
 import com.bloxbean.cardano.yaci.helper.listener.BlockChainDataListener;
@@ -21,8 +23,10 @@ import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static com.bloxbean.cardano.client.address.AddressType.Base;
+import static com.bloxbean.cardano.client.address.AddressType.Enterprise;
 import static com.bloxbean.cardano.yaci.core.model.RedeemerTag.Spend;
-import static com.easystaking.sundaeswap.scooper.analytics.model.Constants.POOL_ADDRESS_V2;
+import static com.easystaking.sundaeswap.scooper.analytics.model.Constants.POOL_NFT_POLICY_ID;
 import static com.easystaking.sundaeswap.scooper.analytics.model.Constants.SETTINGS_NFT_POLICY_ID;
 
 @Service
@@ -65,8 +69,18 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
             if (transactionBody
                     .getOutputs()
                     .stream()
-                    .anyMatch(transactionOutput -> transactionOutput.getAddress().equals(POOL_ADDRESS_V2))) {
-
+                    .anyMatch(transactionOutput -> {
+                        if (transactionOutput.getAddress() != null) {
+                            var address = new Address(transactionOutput.getAddress());
+                            if (List.of(Base, Enterprise).contains(address.getAddressType())) {
+                                return HexUtil.encodeHexString(address.getPaymentCredentialHash().get()).equals(POOL_NFT_POLICY_ID);
+                            } else {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    })) {
                 var protocolFeesOpt = resolveProtocolFees(transactionBody.getReferenceInputs());
                 if (protocolFeesOpt.isEmpty()) {
                     log.warn("protocolFees are unexpectedly empty");
