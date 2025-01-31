@@ -6,6 +6,9 @@ import com.bloxbean.cardano.yaci.core.model.*;
 import com.bloxbean.cardano.yaci.core.protocol.chainsync.messages.Point;
 import com.bloxbean.cardano.yaci.helper.listener.BlockChainDataListener;
 import com.bloxbean.cardano.yaci.helper.model.Transaction;
+import com.bloxbean.cardano.yaci.store.events.BlockEvent;
+import com.bloxbean.cardano.yaci.store.events.RollbackEvent;
+import com.bloxbean.cardano.yaci.store.utxo.domain.AddressUtxoEvent;
 import com.easystaking.sundaeswap.scooper.analytics.entity.Scoop;
 import com.easystaking.sundaeswap.scooper.analytics.model.contract.ProtocolFees;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
@@ -13,6 +16,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.cardanofoundation.conversions.CardanoConverters;
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +49,24 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
     private final SimpMessagingTemplate simpMessagingTemplate;
 
     private List<String> allowedScooperPubKeyHashes;
+
+    @org.springframework.context.event.EventListener
+    @Transactional
+    public void handleRollback(RollbackEvent rollbackEvent) {
+        if (rollbackEvent.getRollbackTo() != null && rollbackEvent.getRollbackTo().getSlot() >= 0) {
+            log.info("processing valid rollback: {}", rollbackEvent);
+            var slot = rollbackEvent.getRollbackTo().getSlot();
+            var numDeletedScoops = scoopRepository.deleteBySlotGreaterThan(slot);
+            log.info("rollback to slot: {}, numDeletedScoops: {}", slot, numDeletedScoops);
+        } else {
+            log.info("detected invalid rollback: {}", rollbackEvent);
+        }
+    }
+
+    @EventListener
+    @Transactional
+    public void eventListener(BlockEvent blockEvent) {
+    }
 
     @Transactional
     @Override
