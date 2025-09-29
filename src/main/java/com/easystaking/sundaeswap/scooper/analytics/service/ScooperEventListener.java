@@ -4,20 +4,20 @@ import com.bloxbean.cardano.client.address.Address;
 import com.bloxbean.cardano.client.api.model.Utxo;
 import com.bloxbean.cardano.client.backend.blockfrost.service.BFBackendService;
 import com.bloxbean.cardano.client.util.HexUtil;
-import com.bloxbean.cardano.yaci.core.model.*;
-import com.bloxbean.cardano.yaci.core.protocol.chainsync.messages.Point;
-import com.bloxbean.cardano.yaci.helper.listener.BlockChainDataListener;
-import com.bloxbean.cardano.yaci.helper.model.Transaction;
+import com.bloxbean.cardano.yaci.core.model.TransactionBody;
+import com.bloxbean.cardano.yaci.core.model.TransactionInput;
+import com.bloxbean.cardano.yaci.core.model.Witnesses;
+import com.bloxbean.cardano.yaci.store.events.BlockEvent;
+import com.bloxbean.cardano.yaci.store.events.RollbackEvent;
 import com.easystaking.sundaeswap.scooper.analytics.entity.Scoop;
-import com.easystaking.sundaeswap.scooper.analytics.model.contract.ProtocolFees;
+import com.easystaking.sundaeswap.scooper.analytics.model.contract.ProtocolSettings;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.cardanofoundation.conversions.CardanoConverters;
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZoneOffset;
 import java.util.*;
@@ -32,13 +32,11 @@ import static com.easystaking.sundaeswap.scooper.analytics.model.Constants.SETTI
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class DefaultBlockchainDataListener implements BlockChainDataListener {
+public class ScooperEventListener {
 
     private final Map<TransactionInput, Utxo> knownReferenceInputs = new HashMap<>();
 
     private final BFBackendService bfBackendService;
-
-    private final ScooperService scooperService;
 
     private final ScoopRepository scoopRepository;
 
@@ -48,14 +46,13 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
 
     private final SimpMessagingTemplate simpMessagingTemplate;
 
-    private List<String> allowedScooperPubKeyHashes;
+    @EventListener
+    public void processEvent(BlockEvent blockEvent) {
 
-    @Transactional
-    @Override
-    public void onBlock(Era era, Block block, List<Transaction> transactions) {
-
-        var slot = block.getHeader().getHeaderBody().getSlot();
+        var slot = blockEvent.getMetadata().getSlot();
         var epoch = cardanoConverters.slot().slotToEpoch(slot);
+
+        var block = blockEvent.getBlock();
 
         var blockTxHashes = block.getTransactionBodies().stream().map(TransactionBody::getTxHash).toList();
 
@@ -84,13 +81,15 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
                             return false;
                         }
                     })) {
-                var protocolFeesOpt = resolveProtocolFees(transactionBody.getReferenceInputs());
-                if (protocolFeesOpt.isEmpty()) {
+                var protocolSettingsOpt = resolveProtocolSettings(transactionBody.getReferenceInputs());
+                if (protocolSettingsOpt.isEmpty()) {
                     log.warn("protocolFees are unexpectedly empty");
                     return;
                 }
 
-                var protocolFees = protocolFeesOpt.get();
+                var protocolSettings = protocolSettingsOpt.get();
+                var protocolFees = protocolSettings.protocolFees();
+                var scooperPkhs = protocolSettings.scooperPubKeyHashes();
 
                 Set<String> requiredSigners = transactionBody.getRequiredSigners();
                 Witnesses witnesses = block.getTransactionWitness().get(i);
@@ -108,7 +107,7 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
 
                     requiredSigners.forEach(signer -> {
 
-                        if (allowedScooperPubKeyHashes.contains(signer)) {
+                        if (scooperPkhs.contains(signer)) {
 
                             // This is a scoop
                             var numMempoolOrders = transactionBody
@@ -158,9 +157,9 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
 
     }
 
-    @Transactional
-    @Override
-    public void onRollback(Point point) {
+    @EventListener
+    public void processRollback(RollbackEvent rollbackEvent) {
+        var point = rollbackEvent.getRollbackTo();
         if (point.getSlot() > 0 && point.getHash() != null) {
             var numDeletedScoops = scoopRepository.deleteBySlotGreaterThan(point.getSlot());
             log.info("rollback to slot: {}, numDeletedScoops: {}", point.getSlot(), numDeletedScoops);
@@ -169,12 +168,7 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
         }
     }
 
-    @PostConstruct
-    public void init() {
-        allowedScooperPubKeyHashes = scooperService.getAllowedScooperPubKeyHashes();
-    }
-
-    private Optional<ProtocolFees> resolveProtocolFees(Set<TransactionInput> referenceInputs) {
+    private Optional<ProtocolSettings> resolveProtocolSettings(Set<TransactionInput> referenceInputs) {
         return referenceInputs
                 .stream()
                 .flatMap(refInput -> {
@@ -198,13 +192,13 @@ public class DefaultBlockchainDataListener implements BlockChainDataListener {
                 .findAny();
     }
 
-    private Optional<ProtocolFees> resolveProtocolFees(Utxo utxo) {
+    private Optional<ProtocolSettings> resolveProtocolFees(Utxo utxo) {
         return utxo
                 .getAmount()
                 .stream()
                 .filter(amount -> amount.getUnit().startsWith(SETTINGS_NFT_POLICY_ID))
                 .findAny()
-                .flatMap(amount -> settingsParser.parseFees(utxo.getInlineDatum()));
+                .flatMap(amount -> settingsParser.parse(utxo.getInlineDatum()));
     }
 
 }

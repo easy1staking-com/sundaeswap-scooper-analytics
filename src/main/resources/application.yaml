@@ -7,6 +7,7 @@ spring:
     password: ${DB_PASSWORD:password}
     schemas: ${DB_SCHEMA:}
     locations:
+      - classpath:db/store/{vendor}
       - classpath:db/store/sundaeswap
     out-of-order: true
   datasource:
@@ -14,14 +15,23 @@ spring:
     username: ${DB_USERNAME:sundaeswap}
     password: ${DB_PASSWORD:password}
 
-cardano:
-  node:
-    host: ${CARDANO_NODE_HOST:#{null}}
-    port: ${CARDANO_NODE_PORT:#{null}}
 
-block-streamer:
-  host: ${CARDANO_NODE_HOST:#{null}}
-  port: ${CARDANO_NODE_PORT:#{null}}
+store:
+  cardano:
+    host: relays-new.cardano-mainnet.iohk.io
+    port: 3001
+    protocol-magic: 764824073
+    # Start from the block that minted the ref input for the contract
+    sync-start-slot: 123706722
+    sync-start-blockhash: 09fde708bac045ac54d1f9e2f215e6c235518d1c43b39b645d9fc46d51c76321
+  utxo:
+    pruning-enabled: true
+    pruning:
+      interval: 600
+  blocks:
+    epoch-calculation-interval=14400:  # 14400 = 4 hours
+
+apiPrefix: /api/v1
 
 blockfrost:
   # Can put anything here as it's not used
