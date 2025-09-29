@@ -81,7 +81,7 @@ public class ScooperEventListener {
                             return false;
                         }
                     })) {
-                var protocolSettingsOpt = resolveProtocolSettings(transactionBody.getReferenceInputs());
+                var protocolSettingsOpt = Optional.ofNullable(transactionBody.getReferenceInputs()).flatMap(this::resolveProtocolSettings);
                 if (protocolSettingsOpt.isEmpty()) {
                     log.warn("protocolFees are unexpectedly empty");
                     return;

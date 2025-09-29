@@ -8,7 +8,7 @@ echo "Building version: ${VERSION}"
 
 ./gradlew bootJar
 
-DOCKER_IMAGE_NAME=speedwing/sundaeswap-scooper-api
+DOCKER_IMAGE_NAME=easy1staking/sundaeswap-scooper-api
 DOCKER_IMAGE="${DOCKER_IMAGE_NAME}:${VERSION}"
 DOCKER_IMAGE_LATEST="${DOCKER_IMAGE_NAME}:latest"
 
