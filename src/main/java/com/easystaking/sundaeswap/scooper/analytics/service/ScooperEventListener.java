@@ -12,6 +12,7 @@ import com.bloxbean.cardano.yaci.store.events.RollbackEvent;
 import com.easystaking.sundaeswap.scooper.analytics.entity.Scoop;
 import com.easystaking.sundaeswap.scooper.analytics.model.contract.ProtocolSettings;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.cardanofoundation.conversions.CardanoConverters;
@@ -47,6 +48,7 @@ public class ScooperEventListener {
     private final SimpMessagingTemplate simpMessagingTemplate;
 
     @EventListener
+    @Transactional
     public void processEvent(BlockEvent blockEvent) {
 
         var slot = blockEvent.getMetadata().getSlot();
@@ -158,6 +160,7 @@ public class ScooperEventListener {
     }
 
     @EventListener
+    @Transactional
     public void processRollback(RollbackEvent rollbackEvent) {
         var point = rollbackEvent.getRollbackTo();
         if (point.getSlot() > 0 && point.getHash() != null) {
