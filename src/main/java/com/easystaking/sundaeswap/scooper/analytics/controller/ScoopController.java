@@ -84,6 +84,54 @@ public class ScoopController {
         return ResponseEntity.ok(modelScoops);
     }
 
+
+    @GetMapping("/csv")
+    public ResponseEntity<?> downloadScoopsCsv(@RequestParam(required = false, name = "scooper_pub_key_hash") String scooperPubKeyHash,
+                                               @Parameter(description = "the start date, in ISO format, to calculate scoopers statistics", example = "2024-04-16")
+                                               @RequestParam(required = false, name = "date_start") LocalDate dateStart,
+                                               @Parameter(description = "the end date (excluded), in ISO format, to calculate scoopers statistics", example = "2024-06-24")
+                                               @RequestParam(required = false, name = "date_end") LocalDate dateEnd,
+                                               @Parameter(description = "The way scoops should be sorted based on slot number, accepted values are ASC and DESC, " +
+                                                       "where ASC is the natural chronological order and DESC the reverse", example = "DESC")
+                                               @RequestParam(required = false, defaultValue = "ASC") String sort,
+                                               @RequestParam(required = false) Integer limit) {
+
+        var actualLimit = limit == null ? Integer.MAX_VALUE : limit;
+        log.info("date range, from: {}, to: {}", dateStart, dateEnd);
+
+        var slotFrom = dateStart == null ? 0L : slotConversionService.toSlot(dateStart.atStartOfDay());
+        var slotTo = dateEnd == null ? Long.MAX_VALUE : slotConversionService.toSlot(dateEnd.atStartOfDay());
+        log.info("slot range, from: {}, to: {}", slotFrom, slotTo);
+
+        Sort sortBy;
+        if (sort != null && sort.equals("DESC")) {
+            sortBy = Sort.by(Sort.Order.desc("slot"));
+        } else {
+            sortBy = Sort.by(Sort.Order.asc("slot"));
+        }
+
+        List<com.easystaking.sundaeswap.scooper.analytics.entity.Scoop> scoops;
+        if (scooperPubKeyHash == null || scooperPubKeyHash.isBlank()) {
+            scoops = scoopRepository.findAllBySlotBetween(slotFrom, slotTo, sortBy, Limit.of(actualLimit));
+        } else {
+            scoops = scoopRepository.findAllByScooperPubKeyHashAndSlotBetween(scooperPubKeyHash, slotFrom, slotTo, sortBy, Limit.of(actualLimit));
+        }
+
+        var modelScoops = scoops.stream().map(scoop -> {
+            var dateTime = converters.slot().slotToTime(scoop.getSlot());
+            var timestamp = dateTime.toEpochSecond(ZoneOffset.UTC);
+            return new Scoop(timestamp, scoop.getTxHash(), scoop.getOrders(), scoop.getScooperPubKeyHash(), scoop.getNumMempoolOrders() > 0);
+        }).toList();
+
+        var soopsCsvBytes = CSVHelper.scoops(modelScoops);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "scoops.csv")
+                .contentType(MediaType.parseMediaType("application/csv"))
+                .body(soopsCsvBytes.toByteArray());
+
+    }
+
     @GetMapping("/{txHash}")
     public ResponseEntity<Scoop> getByTxHash(@PathVariable String txHash) {
         log.info("txHash: {}", txHash);

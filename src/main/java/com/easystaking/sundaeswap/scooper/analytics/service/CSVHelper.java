@@ -1,6 +1,7 @@
 package com.easystaking.sundaeswap.scooper.analytics.service;
 
 import com.easystaking.sundaeswap.scooper.analytics.model.ExtendedScooperStats;
+import com.easystaking.sundaeswap.scooper.analytics.model.Scoop;
 import lombok.extern.slf4j.Slf4j;
 import org.supercsv.io.CsvListWriter;
 import org.supercsv.prefs.CsvPreference;
@@ -12,6 +13,29 @@ import java.util.List;
 
 @Slf4j
 public class CSVHelper {
+
+    public static ByteArrayOutputStream scoops(List<Scoop> scoops) {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+//             Long timestamp, String txHash, Long numOrders, String scooperHash, Boolean isMempool
+             CsvListWriter csvWriter = new CsvListWriter(new OutputStreamWriter(outputStream), CsvPreference.STANDARD_PREFERENCE)) {
+            csvWriter.write("timestamp", "tx_hash", "num_orders", "scooper_hash", "is_mempool");
+            scoops.forEach(scoop -> {
+                try {
+                    csvWriter.write(scoop.timestamp(),
+                            scoop.txHash(),
+                            scoop.numOrders(),
+                            scoop.scooperHash(),
+                            scoop.isMempool());
+                } catch (Exception e) {
+                    log.warn("error:", e);
+                }
+
+            });
+            return outputStream;
+        } catch (IOException e) {
+            throw new RuntimeException("fail to import data to CSV file: " + e.getMessage());
+        }
+    }
 
     public static ByteArrayOutputStream scoopersStats(List<ExtendedScooperStats> stats) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
