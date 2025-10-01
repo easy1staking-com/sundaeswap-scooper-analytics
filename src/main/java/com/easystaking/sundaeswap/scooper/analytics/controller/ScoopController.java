@@ -258,5 +258,11 @@ public class ScoopController {
 
     }
 
+    @Operation(summary = "Get list of scooper public key hashes", description = "Returns a distinct list of all scooper public key hashes")
+    @GetMapping("/scoopers")
+    public ResponseEntity<List<String>> getScooperPubKeyHashes() {
+        return ResponseEntity.ok(scoopRepository.findDistinctScooperPubKeyHashes());
+    }
+
 
 }

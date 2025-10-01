@@ -55,4 +55,7 @@ public interface ScoopRepository extends JpaRepository<Scoop, String> {
             "count(1)  AS totalNumberScoops FROM Scoop WHERE slot BETWEEN :slotFrom and :slotTo GROUP BY period ORDER BY period DESC")
     List<ScooperPeriodStats> getScooperPeriodStats(String scooperPubKeyHash, Long slotFrom, Long slotTo, Long periodLength);
 
+    @Query("SELECT DISTINCT s.scooperPubKeyHash FROM Scoop s ORDER BY s.scooperPubKeyHash")
+    List<String> findDistinctScooperPubKeyHashes();
+
 }
