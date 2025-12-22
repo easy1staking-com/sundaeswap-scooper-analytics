@@ -6,6 +6,7 @@ import com.bloxbean.cardano.client.common.model.Networks;
 import com.easystaking.sundaeswap.scooper.analytics.entity.projections.ScooperPeriodStats;
 import com.easystaking.sundaeswap.scooper.analytics.model.*;
 import com.easystaking.sundaeswap.scooper.analytics.repository.ScoopRepository;
+import com.easystaking.sundaeswap.scooper.analytics.service.AnalyticsService;
 import com.easystaking.sundaeswap.scooper.analytics.service.CSVHelper;
 import com.easystaking.sundaeswap.scooper.analytics.service.ScooperService;
 import com.easystaking.sundaeswap.scooper.analytics.service.SlotConversionService;
@@ -42,6 +43,8 @@ public class ScoopController {
     private final CardanoConverters converters;
 
     private final SlotConversionService slotConversionService;
+
+    private final AnalyticsService analyticsService;
 
     @GetMapping
     public ResponseEntity<List<Scoop>> get(@RequestParam(required = false, name = "scooper_pub_key_hash") String scooperPubKeyHash,
@@ -262,6 +265,73 @@ public class ScoopController {
     @GetMapping("/scoopers")
     public ResponseEntity<List<String>> getScooperPubKeyHashes() {
         return ResponseEntity.ok(scoopRepository.findDistinctScooperPubKeyHashes());
+    }
+
+    @Operation(summary = "Get protocol time-series analytics", description = "Returns aggregated protocol metrics grouped by time period (day, week, month, hour)")
+    @GetMapping("/analytics/timeseries")
+    public ResponseEntity<List<ProtocolPeriodStats>> getProtocolTimeSeries(
+            @Parameter(description = "Start date (inclusive) in ISO format", example = "2024-09-01")
+            @RequestParam(name = "date_start") LocalDate dateStart,
+
+            @Parameter(description = "End date (exclusive) in ISO format", example = "2024-10-01")
+            @RequestParam(name = "date_end") LocalDate dateEnd,
+
+            @Parameter(description = "Time period granularity: hour, day, week, month", example = "day")
+            @RequestParam(required = false, defaultValue = "day") String granularity) {
+
+        log.info("Time-series analytics request: {} to {}, granularity: {}",
+            dateStart, dateEnd, granularity);
+
+        var stats = analyticsService.getProtocolTimeSeries(dateStart, dateEnd, granularity);
+
+        return ResponseEntity.ok(stats);
+    }
+
+    @Operation(summary = "Get protocol epoch analytics", description = "Returns aggregated protocol metrics grouped by Cardano epoch")
+    @GetMapping("/analytics/epochs")
+    public ResponseEntity<List<ProtocolPeriodStats>> getProtocolEpochAnalytics(
+            @Parameter(description = "Start date (inclusive) in ISO format", example = "2024-09-01")
+            @RequestParam(name = "date_start") LocalDate dateStart,
+
+            @Parameter(description = "End date (exclusive) in ISO format", example = "2024-10-01")
+            @RequestParam(name = "date_end") LocalDate dateEnd) {
+
+        log.info("Epoch analytics request: {} to {}", dateStart, dateEnd);
+
+        var stats = analyticsService.getProtocolEpochStats(dateStart, dateEnd);
+
+        return ResponseEntity.ok(stats);
+    }
+
+    @Operation(summary = "Get current month analytics", description = "Returns protocol metrics for the current month to date, grouped daily")
+    @GetMapping("/analytics/current-month")
+    public ResponseEntity<List<ProtocolPeriodStats>> getCurrentMonthAnalytics() {
+
+        var now = LocalDate.now(ZoneOffset.UTC);
+        var startOfMonth = now.withDayOfMonth(1);
+        var tomorrow = now.plusDays(1);
+
+        log.info("Current month analytics: {} to {}", startOfMonth, tomorrow);
+
+        var stats = analyticsService.getProtocolTimeSeries(startOfMonth, tomorrow, "day");
+
+        return ResponseEntity.ok(stats);
+    }
+
+    @Operation(summary = "Get historical monthly analytics", description = "Returns protocol metrics aggregated by month for a date range")
+    @GetMapping("/analytics/monthly")
+    public ResponseEntity<List<ProtocolPeriodStats>> getMonthlyAnalytics(
+            @Parameter(description = "Start date (inclusive) in ISO format", example = "2024-01-01")
+            @RequestParam(name = "date_start") LocalDate dateStart,
+
+            @Parameter(description = "End date (exclusive) in ISO format", example = "2024-12-01")
+            @RequestParam(name = "date_end") LocalDate dateEnd) {
+
+        log.info("Monthly analytics request: {} to {}", dateStart, dateEnd);
+
+        var stats = analyticsService.getProtocolTimeSeries(dateStart, dateEnd, "month");
+
+        return ResponseEntity.ok(stats);
     }
 
 

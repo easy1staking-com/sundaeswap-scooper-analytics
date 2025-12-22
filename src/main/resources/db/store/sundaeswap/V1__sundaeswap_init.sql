@@ -7,8 +7,10 @@ CREATE TABLE scoops (
     num_mempool_orders BIGINT NOT NULL,
     slot BIGINT NOT NULL,
     epoch BIGINT NOT NULL,
-    version BIGINT NOT NULL
+    version BIGINT NOT NULL,
+    timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS scoops_scooper_pub_key_hash_epoch_version ON scoops(scooper_pub_key_hash, epoch, version);
 CREATE INDEX IF NOT EXISTS scoops_slot_scooper_pub_key_hash ON scoops(slot DESC, scooper_pub_key_hash);
+CREATE INDEX IF NOT EXISTS scoops_timestamp_range ON scoops(timestamp);

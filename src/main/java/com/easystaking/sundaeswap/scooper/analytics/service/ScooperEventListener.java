@@ -120,6 +120,9 @@ public class ScooperEventListener {
 
                             var protocolFee = protocolFees.baseFee().longValue() + orders * protocolFees.simpleFee().longValue();
 
+                            // Convert slot to timestamp for time-based analytics
+                            var timestamp = cardanoConverters.slot().slotToTime(block.getHeader().getHeaderBody().getSlot());
+
                             Scoop dbScoop = Scoop.builder()
                                     .txHash(transactionBody.getTxHash())
                                     .scooperPubKeyHash(signer)
@@ -128,6 +131,7 @@ public class ScooperEventListener {
                                     .transactionFee(transactionBody.getFee().longValue())
                                     .epoch(epoch)
                                     .slot(block.getHeader().getHeaderBody().getSlot())
+                                    .timestamp(timestamp)
                                     .version(3L)
                                     .numMempoolOrders(numMempoolOrders)
                                     .build();
@@ -136,8 +140,8 @@ public class ScooperEventListener {
 
 
                             try {
-                                var timestamp = cardanoConverters.slot().slotToTime(block.getHeader().getHeaderBody().getSlot()).toEpochSecond(ZoneOffset.UTC) * 1_000;
-                                var scoop = new com.easystaking.sundaeswap.scooper.analytics.model.Scoop(timestamp,
+                                var timestampInMillis = timestamp.toEpochSecond(ZoneOffset.UTC) * 1_000;
+                                var scoop = new com.easystaking.sundaeswap.scooper.analytics.model.Scoop(timestampInMillis,
                                         dbScoop.getTxHash(),
                                         dbScoop.getOrders(),
                                         dbScoop.getScooperPubKeyHash(),

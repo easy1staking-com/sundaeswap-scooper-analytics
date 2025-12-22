@@ -1,5 +1,6 @@
 package com.easystaking.sundaeswap.scooper.analytics.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -34,5 +35,8 @@ public class Scoop {
     private Long version;
 
     private Long numMempoolOrders;
+
+    @Column(name = "timestamp", nullable = false)
+    private LocalDateTime timestamp;
 
 }
